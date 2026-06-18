@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell(node -e \"const D=require\\('better-sqlite3'\\); const d=new D\\(':memory:'\\); console.log\\('sqlite ok, version=', d.prepare\\('SELECT sqlite_version\\(\\) v'\\).get\\(\\).v\\)\")",
+      "PowerShell(node -e \"const D=require\\('better-sqlite3'\\); const d=new D\\('./data/gestionale.sqlite'\\); const t=d.prepare\\(\\\\\"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name\\\\\"\\).all\\(\\); console.log\\('Tabelle:'\\); for\\(const r of t\\) console.log\\(' -', r.name\\);\")"
+    ]
+  }
+}
