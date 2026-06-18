@@ -135,8 +135,8 @@ app.use((err, req, res, next) => {
 
 function start() {
   return new Promise((resolve) => {
-    const server = app.listen(config.port, () => {
-      console.log(`[server] in ascolto su http://localhost:${config.port}  (env=${config.nodeEnv})`);
+    const server = app.listen(config.port, '0.0.0.0', () => {
+      console.log(`[server] in ascolto su http://0.0.0.0:${config.port}  (env=${config.nodeEnv})`);
       resolve(server);
     });
   });
