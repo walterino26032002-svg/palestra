@@ -128,7 +128,6 @@ router.get('/', (req, res) => {
     user: req.admin,
     active: '/admin',
     body,
-    active: '/admin',
     breadcrumb: [],
   }));
 });
@@ -154,26 +153,35 @@ router.get('/clienti', (req, res) => {
   `).join('') || `<tr><td colspan="7" class="muted">Nessun cliente.</td></tr>`;
 
   const body = `
-    <div class="row-between">
-      <h1>Clienti</h1>
-      <a class="btn btn-primary" href="/admin/clienti/nuovo">+ Nuovo cliente</a>
+    <div class="page-header">
+      <div class="page-head">
+        <p class="eyebrow">Anagrafica</p>
+        <h1>Clienti</h1>
+        <p class="muted">Stato, saldo ingressi e pagamenti dei tesserati.</p>
+      </div>
+      <div class="toolbar">
+        <a class="btn btn-primary" href="/admin/clienti/nuovo">+ Nuovo cliente</a>
+      </div>
     </div>
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
     <form method="GET" action="/admin/clienti" class="filter-bar">
       <input type="text" name="q" placeholder="Cerca per nome, cognome, email, telefono" value="${escapeHtml(q)}">
       <button type="submit" class="btn">Cerca</button>
     </form>
-    <table class="table">
-      <thead><tr>
-        <th>ID</th><th>Nome</th><th>Email</th><th>Telefono</th>
-        <th>Saldo</th><th>Badge</th><th>Stato</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr>
+          <th>ID</th><th>Nome</th><th>Email</th><th>Telefono</th>
+          <th>Saldo</th><th>Badge</th><th>Stato</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   `;
   res.send(adminLayout({
     title: 'Clienti',
     user: req.admin,
+    active: '/admin/clienti',
     body,
     breadcrumb: [
       { label: 'Dashboard', href: '/admin' },
@@ -188,6 +196,7 @@ router.get('/clienti/nuovo', (req, res) => {
   res.send(adminLayout({
     title: 'Nuovo cliente',
     user: req.admin,
+    active: '/admin/clienti',
     body,
     breadcrumb: [
       { label: 'Dashboard', href: '/admin' },
@@ -255,9 +264,12 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
   ).join('');
 
   const body = `
-    <div class="row-between">
-      <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} <span class="muted small">#${cliente.id}</span></h1>
-      <div>
+    <div class="page-header">
+      <div class="page-head">
+        <p class="eyebrow">Scheda cliente · #${cliente.id}</p>
+        <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</h1>
+      </div>
+      <div class="toolbar">
         <a class="btn" href="/admin/clienti">← Tutti i clienti</a>
       </div>
     </div>
@@ -265,10 +277,10 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
     <div class="filter-bar">
-      <a class="btn" href="/admin/clienti/${cliente.id}/scheda/pdf">PDF scheda</a>
-      <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
-      <a class="btn" href="/admin/clienti/${cliente.id}/report/pdf">PDF report cliente</a>
-      <a class="btn" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report cliente</a>
+      <a class="btn btn-subtle" href="/admin/clienti/${cliente.id}/scheda/pdf">PDF scheda</a>
+      <a class="btn btn-subtle" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
+      <a class="btn btn-subtle" href="/admin/clienti/${cliente.id}/report/pdf">PDF report cliente</a>
+      <a class="btn btn-subtle" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report cliente</a>
     </div>
 
     <section class="grid grid-3">
@@ -324,7 +336,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       </div>
     </section>
 
-    <h2 style="margin-top:24px">Registra pagamento</h2>
+    <h2 class="section-gap">Registra pagamento</h2>
     <form method="POST" action="/admin/clienti/${cliente.id}/pagamenti" class="card form-inline">
       <label>Servizio
         <select name="servizio_id" required>
@@ -332,28 +344,38 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
           ${serviziOptions}
         </select>
       </label>
-      <label>Importo (cent) <input name="importo_cent" type="number" min="0" placeholder="listino"></label>
+      <label>Importo
+        <span class="field-euro">
+          <input type="text" inputmode="decimal" data-euro data-euro-target="importo_cent_pag" placeholder="listino">
+        </span>
+        <input type="hidden" name="importo_cent" id="importo_cent_pag">
+      </label>
       <label>Metodo <input name="metodo" placeholder="contanti, bonifico..."></label>
       <label>Note <input name="note"></label>
       <button type="submit" class="btn btn-primary">Registra pagamento</button>
     </form>
 
-    <h2 style="margin-top:24px">Pagamenti</h2>
-    <table class="table">
-      <thead><tr><th>ID</th><th>Data</th><th>Servizio</th><th>Ingressi</th><th>Importo</th><th>Metodo</th></tr></thead>
-      <tbody>${pagRows}</tbody>
-    </table>
+    <h2 class="section-gap">Pagamenti</h2>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>ID</th><th>Data</th><th>Servizio</th><th>Ingressi</th><th>Importo</th><th>Metodo</th></tr></thead>
+        <tbody>${pagRows}</tbody>
+      </table>
+    </div>
 
-    <h2 style="margin-top:24px">Movimenti ingressi</h2>
-    <table class="table">
-      <thead><tr><th>ID</th><th>Data</th><th>Δ</th><th>Motivo</th><th>Rif.</th></tr></thead>
-      <tbody>${movRows}</tbody>
-    </table>
+    <h2 class="section-gap">Movimenti ingressi</h2>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>ID</th><th>Data</th><th>Δ</th><th>Motivo</th><th>Rif.</th></tr></thead>
+        <tbody>${movRows}</tbody>
+      </table>
+    </div>
   `;
 
   res.send(adminLayout({
     title: `${cliente.cognome} ${cliente.nome}`,
     user: req.admin,
+    active: '/admin/clienti',
     body,
     breadcrumb: [
       { label: 'Dashboard', href: '/admin' },
@@ -462,9 +484,12 @@ router.get('/servizi', (req, res) => {
         <form method="POST" action="/admin/servizi/${s.id}" class="inline-form">
           <input name="nome" value="${escapeHtml(s.nome)}" required>
           <input name="descrizione" value="${escapeHtml(s.descrizione || '')}" placeholder="descrizione">
-          <input name="ingressi" type="number" min="0" value="${s.ingressi}" style="width:70px">
-          <input name="prezzo_cent" type="number" min="0" value="${s.prezzo_cent}" style="width:100px">
-          <button type="submit" class="btn">Salva</button>
+          <input name="ingressi" type="number" min="0" value="${s.ingressi}" class="w-serie" aria-label="Ingressi">
+          <span class="field-euro">
+            <input type="text" inputmode="decimal" data-euro data-euro-target="srv_prezzo_${s.id}" class="w-carico" aria-label="Prezzo in euro">
+          </span>
+          <input type="hidden" name="prezzo_cent" id="srv_prezzo_${s.id}" value="${s.prezzo_cent}">
+          <button type="submit" class="btn btn-sm">Salva</button>
         </form>
       </td>
       <td>${s.attivo ? '<span class="badge badge-ok">Attivo</span>' : '<span class="badge badge-danger">Disattivo</span>'}</td>
@@ -477,14 +502,23 @@ router.get('/servizi', (req, res) => {
   `).join('');
 
   const body = `
-    <h1>Servizi / Listino</h1>
+    <header class="page-head">
+      <p class="eyebrow">Listino</p>
+      <h1>Servizi</h1>
+      <p class="muted">Pacchetti ingressi e prezzi. Gli importi sono in euro.</p>
+    </header>
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
     <h2>Nuovo servizio</h2>
     <form method="POST" action="/admin/servizi" class="card form-inline">
       <label>Nome <input name="nome" required></label>
       <label>Descrizione <input name="descrizione"></label>
       <label>Ingressi <input name="ingressi" type="number" min="0" value="1" required></label>
-      <label>Prezzo (cent) <input name="prezzo_cent" type="number" min="0" value="0" required></label>
+      <label>Prezzo
+        <span class="field-euro">
+          <input type="text" inputmode="decimal" data-euro data-euro-target="srv_prezzo_new" placeholder="0,00" required>
+        </span>
+        <input type="hidden" name="prezzo_cent" id="srv_prezzo_new" value="0">
+      </label>
       <label>Stato
         <select name="attivo">
           <option value="1" selected>Attivo</option>
@@ -494,16 +528,19 @@ router.get('/servizi', (req, res) => {
       <button type="submit" class="btn btn-primary">Crea servizio</button>
     </form>
 
-    <h2 style="margin-top:24px">Listino</h2>
-    <table class="table">
-      <thead><tr><th>ID</th><th>Servizio</th><th>Stato</th><th>Azioni</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="4" class="muted">Nessun servizio.</td></tr>`}</tbody>
-    </table>
+    <h2 class="section-gap">Listino</h2>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>ID</th><th>Servizio</th><th>Stato</th><th>Azioni</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="muted">Nessun servizio.</td></tr>`}</tbody>
+      </table>
+    </div>
   `;
 
   res.send(adminLayout({
     title: 'Servizi',
     user: req.admin,
+    active: '/admin/servizi',
     body,
     breadcrumb: [
       { label: 'Dashboard', href: '/admin' },
