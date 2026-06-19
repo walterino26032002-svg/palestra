@@ -321,7 +321,6 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
 
   const esRows = esercizi.map((ex) => `
     <tr data-id="${ex.id}">
-      <td class="ord">${ex.ordine}</td>
       <td><input name="nome" value="${escapeHtml(ex.nome)}" required></td>
       <td><input name="serie" type="number" min="0" value="${ex.serie ?? ''}" style="width:60px"></td>
       <td><input name="ripetizioni" value="${escapeHtml(ex.ripetizioni || '')}" style="width:80px"></td>
@@ -329,13 +328,17 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
       <td><input name="recupero" value="${escapeHtml(ex.recupero || '')}" style="width:80px"></td>
       <td><input name="note" value="${escapeHtml(ex.note || '')}"></td>
       <td class="nowrap">
-        <button type="button" class="btn btn-ghost small js-up">↑</button>
-        <button type="button" class="btn btn-ghost small js-down">↓</button>
-        <button type="button" class="btn btn-primary small js-save">Salva</button>
-        <button type="button" class="btn btn-danger small js-del">Elimina</button>
+        <div>
+          <button type="button" class="btn btn-ghost small js-up">↑</button>
+          <button type="button" class="btn btn-ghost small js-down">↓</button>
+          <button type="button" class="btn btn-primary small js-save">Salva</button>
+        </div>
+        <div style="margin-top:4px">
+          <button type="button" class="btn btn-danger small js-del">Elimina</button>
+        </div>
       </td>
     </tr>
-  `).join('') || `<tr class="empty"><td colspan="8" class="muted">Nessun esercizio. Aggiungi il primo con il form sotto.</td></tr>`;
+  `).join('') || `<tr class="empty"><td colspan="7" class="muted">Nessun esercizio. Aggiungi il primo con il form sotto.</td></tr>`;
 
   const prossimaDisabled = seduta.stato === 'PROSSIMA' ? 'disabled' : '';
   const statoOptions = seduteService.STATI.map((s) =>
@@ -346,7 +349,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
     <div class="page-head row-between">
       <div>
         <span class="eyebrow">Editor seduta</span>
-        <h1>Seduta #${seduta.id} <span class="muted small">Settimana ${seduta.indice_settimana} · Seduta ${seduta.indice_seduta}</span> ${statoBadge(seduta.stato)}</h1>
+        <h1>Settimana ${seduta.indice_settimana} · Seduta ${seduta.indice_seduta} ${statoBadge(seduta.stato)}</h1>
       </div>
       <div class="toolbar">
         <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
@@ -356,43 +359,17 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
 
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
-    <section class="card">
-      <div class="row-between" style="margin-bottom:0">
-        <div>
-          <span class="eyebrow">${escapeHtml(seduta.blocco_nome)}</span>
-          <p class="muted small" style="margin-top:4px">Cliente: <a href="/admin/clienti/${seduta.cliente_id}">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</a></p>
-          ${seduta.titolo ? `<p style="margin-top:4px"><strong>${escapeHtml(seduta.titolo)}</strong></p>` : ''}
-        </div>
-        <form method="POST" action="/admin/sedute/${seduta.id}/prossima" style="display:inline">
-          <button type="submit" class="btn btn-primary" ${prossimaDisabled}>Imposta come PROSSIMA</button>
-        </form>
-      </div>
-
-      <details class="stato-adv" style="margin-top:16px">
-        <summary class="muted small">Stato seduta (avanzato)</summary>
-        <p class="muted small" style="margin-top:8px">Ogni cliente dovrebbe avere una sola seduta <strong>Prossima</strong> alla volta. Usa il pulsante qui sopra per impostarla; modifica lo stato manuale solo se necessario (es. segnare come <strong>Saltata</strong> o riportare a <strong>Bozza</strong>).</p>
-        <form method="POST" action="/admin/sedute/${seduta.id}/stato" class="form-inline" style="margin-top:10px">
-          <label>Stato
-            <select name="stato">${statoOptions}</select>
-          </label>
-          <label>Titolo <input name="titolo" value="${escapeHtml(seduta.titolo || '')}"></label>
-          <button type="submit" class="btn">Aggiorna stato</button>
-        </form>
-      </details>
+    <section class="card" style="margin-bottom:12px;padding:12px 16px">
+      <span class="eyebrow">${escapeHtml(seduta.blocco_nome)}</span>
+      <p class="muted small" style="margin-top:4px">Cliente: <a href="/admin/clienti/${seduta.cliente_id}">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</a></p>
+      <p class="muted small" style="margin-top:2px">ID per copia esercizi: ${seduta.id}</p>
     </section>
 
-    <h2 style="margin-top:24px">Esercizi</h2>
+    <h2>Esercizi</h2>
     <div class="card" style="overflow-x:auto">
       <table class="table excel-table" id="eserciziTable">
         <thead><tr>
-          <th>#</th>
-          <th>Nome</th>
-          <th>Serie</th>
-          <th>Reps</th>
-          <th>Carico</th>
-          <th>Recupero</th>
-          <th>Note</th>
-          <th>Azioni</th>
+          <th>Nome</th><th>Serie</th><th>Reps</th><th>Carico</th><th>Recupero</th><th>Note</th><th>Azioni</th>
         </tr></thead>
         <tbody>${esRows}</tbody>
       </table>
@@ -409,13 +386,36 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
       <button type="submit" class="btn btn-primary">Aggiungi</button>
     </form>
 
-    <h3 style="margin-top:20px">Copia esercizi da un'altra seduta</h3>
-    <form method="POST" action="/admin/sedute/${seduta.id}/esercizi/copia-da" class="card form-inline">
-      <label>ID seduta sorgente
-        <input name="da_seduta_id" type="number" min="1" required>
-      </label>
-      <button type="submit" class="btn">Copia (sovrascrive esercizi attuali)</button>
-    </form>
+    <details style="margin-top:20px">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Opzioni seduta</summary>
+      <div class="card" style="margin-top:10px">
+        <form method="POST" action="/admin/sedute/${seduta.id}/stato">
+          <label style="display:block;margin-bottom:12px">Titolo seduta
+            <input name="titolo" value="${escapeHtml(seduta.titolo || '')}" style="display:block;margin-top:4px;width:100%;max-width:360px">
+          </label>
+          <label style="display:block;margin-bottom:12px">Stato seduta
+            <p class="muted small" style="margin:4px 0">Modifica manualmente solo se necessario.</p>
+            <select name="stato">${statoOptions}</select>
+          </label>
+          <button type="submit" class="btn btn-primary">Salva</button>
+        </form>
+        <hr style="margin:16px 0;border:none;border-top:1px solid var(--line)">
+        <p class="muted small" style="margin-bottom:10px">Ogni cliente ha una sola seduta pronta alla volta.</p>
+        <form method="POST" action="/admin/sedute/${seduta.id}/prossima" style="display:inline">
+          <button type="submit" class="btn" ${prossimaDisabled}>Rendi seduta pronta</button>
+        </form>
+      </div>
+    </details>
+
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Copia esercizi da altra seduta</summary>
+      <form method="POST" action="/admin/sedute/${seduta.id}/esercizi/copia-da" class="card form-inline" style="margin-top:10px">
+        <label>ID per copia esercizi della seduta sorgente
+          <input name="da_seduta_id" type="number" min="1" required>
+        </label>
+        <button type="submit" class="btn">Copia (sovrascrive esercizi attuali)</button>
+      </form>
+    </details>
 
     <script>
       (function () {
@@ -474,7 +474,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
   `;
 
   res.send(adminLayout({
-    title: `Seduta #${seduta.id}`,
+    title: `Sett. ${seduta.indice_settimana} · Sed. ${seduta.indice_seduta}`,
     user: req.admin,
     body,
     breadcrumb: [
@@ -482,7 +482,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
       { label: 'Clienti', href: '/admin/clienti' },
       { label: `${cliente.cognome} ${cliente.nome}`, href: `/admin/clienti/${cliente.id}` },
       { label: 'Scheda', href: `/admin/clienti/${cliente.id}/scheda` },
-      { label: `Seduta #${seduta.id}` },
+      { label: `Sett. ${seduta.indice_settimana} · Sed. ${seduta.indice_seduta}` },
     ],
   }));
 });
