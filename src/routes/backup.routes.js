@@ -20,29 +20,7 @@ const { adminLayout } = require('../views/adminLayout');
 
 const router = express.Router();
 
-// -------------------------------------------------------------
-// Helpers (copia locale coerente con gli altri router admin)
-// -------------------------------------------------------------
-function wantsHtml(req) {
-  const accept = (req.headers.accept || '').toLowerCase();
-  return accept.includes('text/html') && !accept.includes('application/json');
-}
-
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function alertBlock(kind, msg) {
-  if (!msg) return '';
-  return `<div class="alert alert-${escapeHtml(kind)}">${escapeHtml(msg)}</div>`;
-}
-
-function backWithMsg(res, base, msg, kind = 'ok') {
-  const sep = base.includes('?') ? '&' : '?';
-  return res.redirect(303, `${base}${sep}${kind}=${encodeURIComponent(msg)}`);
-}
+const { escapeHtml, wantsHtml, alertBlock, backWithMsg } = require('../utils/helpers');
 
 function fmtSize(bytes) {
   const n = Number(bytes || 0);
@@ -71,55 +49,80 @@ router.get('/backup', (req, res) => {
   const backupRows = backups.map((b) => `
     <tr>
       <td><code>${escapeHtml(b.filename)}</code></td>
-      <td>${fmtSize(b.size)}</td>
-      <td>${escapeHtml(fmtDate(b.modificato_il))}</td>
-      <td class="nowrap">
-        <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Download</a>
+      <td class="num">${fmtSize(b.size)}</td>
+      <td class="hide-mobile">${escapeHtml(fmtDate(b.modificato_il))}</td>
+      <td class="col-right nowrap">
+        <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Scarica</a>
         <form method="POST" action="/admin/backup/restore" style="display:inline"
               onsubmit="return confirm('Ripristinare questo backup? Verrà prima creato un backup di emergenza dello stato attuale.');">
           <input type="hidden" name="filename" value="${escapeHtml(b.filename)}">
-          <button type="submit" class="btn btn-danger small">Restore</button>
+          <button type="submit" class="btn btn-danger small">Ripristina</button>
         </form>
       </td>
     </tr>`).join('') || `<tr><td colspan="4" class="muted">Nessun backup presente.</td></tr>`;
 
+  const backupCards = backups.map((b) => `
+    <div class="row-card">
+      <div class="rc-top">
+        <span class="t"><code>${escapeHtml(b.filename)}</code></span>
+        <span class="muted small">${fmtSize(b.size)}</span>
+      </div>
+      <div class="rc-meta"><span>${escapeHtml(fmtDate(b.modificato_il))}</span></div>
+      <div class="rc-act">
+        <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Scarica</a>
+        <form method="POST" action="/admin/backup/restore" style="display:inline"
+              onsubmit="return confirm('Ripristinare questo backup? Verrà prima creato un backup di emergenza dello stato attuale.');">
+          <input type="hidden" name="filename" value="${escapeHtml(b.filename)}">
+          <button type="submit" class="btn btn-danger small">Ripristina</button>
+        </form>
+      </div>
+    </div>`).join('') || `<div class="empty-state"><h3>Nessun backup</h3><p class="muted">Usa "Crea backup ora" per generarne uno.</p></div>`;
+
   const logRows = log.map((l) => `
     <tr>
-      <td>${l.id}</td>
+      <td class="muted num">#${l.id}</td>
       <td>${escapeHtml(fmtDate(l.creato_il))}</td>
       <td>${escapeHtml(l.tipo)}</td>
-      <td>${l.esito === 'ok' ? '<span class="badge badge-ok">ok</span>' : '<span class="badge badge-danger">errore</span>'}</td>
-      <td><code>${escapeHtml(l.percorso)}</code></td>
+      <td>${l.esito === 'ok' ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-danger">Errore</span>'}</td>
+      <td class="hide-mobile"><code>${escapeHtml(l.percorso)}</code></td>
       <td class="muted small">${escapeHtml(l.messaggio || '')}</td>
     </tr>`).join('') || `<tr><td colspan="6" class="muted">Nessun evento.</td></tr>`;
 
   const body = `
-    <div class="row-between">
-      <h1>Backup</h1>
-      <form method="POST" action="/admin/backup/crea" style="display:inline">
-        <button type="submit" class="btn btn-primary">Crea backup ora</button>
-      </form>
-    </div>
+    <header class="page-head">
+      <p class="eyebrow">Sistema</p>
+      <div class="row-between" style="margin-bottom:0">
+        <h1>Backup</h1>
+        <form method="POST" action="/admin/backup/crea" style="display:inline">
+          <button type="submit" class="btn btn-primary">Crea backup ora</button>
+        </form>
+      </div>
+      <p class="muted">Backup locali del database. Il ripristino crea sempre prima un backup di emergenza e verifica l'integrità.</p>
+    </header>
+
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
-    <p class="muted small">
-      I backup sono salvati localmente in <code>backups/</code>. Il restore crea sempre prima un backup
-      di emergenza (<code>_pre_restore</code>) e verifica l'integrità del database.
-      <strong>Importante:</strong> copia periodicamente i backup anche su un disco esterno / USB:
-      la sola SD card del Raspberry NON è sufficiente.
-    </p>
+    <div class="alert alert-warn">
+      <strong>Conserva i backup fuori dal dispositivo.</strong> I file sono salvati in <code>backups/</code>.
+      Copiali periodicamente su un disco esterno o USB: la sola SD card del Raspberry non è sufficiente.
+    </div>
 
-    <h2 style="margin-top:16px">Backup disponibili</h2>
-    <table class="table">
-      <thead><tr><th>File</th><th>Dimensione</th><th>Data</th><th>Azioni</th></tr></thead>
-      <tbody>${backupRows}</tbody>
-    </table>
+    <h2 class="section-gap">Backup disponibili</h2>
+    <div class="table-wrap hide-mobile">
+      <table class="table">
+        <thead><tr><th>File</th><th>Dimensione</th><th>Data</th><th class="col-right">Azioni</th></tr></thead>
+        <tbody>${backupRows}</tbody>
+      </table>
+    </div>
+    <div class="card-list">${backupCards}</div>
 
-    <h2 style="margin-top:24px">Log backup</h2>
-    <table class="table">
-      <thead><tr><th>ID</th><th>Quando</th><th>Tipo</th><th>Esito</th><th>File</th><th>Note</th></tr></thead>
-      <tbody>${logRows}</tbody>
-    </table>
+    <h2 class="section-gap">Log backup</h2>
+    <div class="table-wrap hide-mobile">
+      <table class="table">
+        <thead><tr><th>ID</th><th>Quando</th><th>Tipo</th><th>Esito</th><th>File</th><th>Note</th></tr></thead>
+        <tbody>${logRows}</tbody>
+      </table>
+    </div>
   `;
   res.send(adminLayout({
     title: 'Backup',

@@ -6,11 +6,7 @@
  * con logo, breadcrumb. Sostituisce le 5 copie duplicate di adminLayout().
  */
 
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+const { escapeHtml } = require('../utils/helpers');
 
 // Voci di navigazione admin (coerenti ovunque). `active` evidenzia la sezione.
 const NAV = [
@@ -25,10 +21,12 @@ const NAV = [
   { href: '/admin/backup',   label: 'Backup' },
 ];
 
-function navHtml(active) {
+function navHtml(active, counts = {}) {
   return NAV.map((n) => {
-    const cls = active === n.href ? 'nav-link active' : 'nav-link';
-    return `<a href="${n.href}" class="${cls}">${escapeHtml(n.label)}</a>`;
+    const cls = active === n.href ? 'navlink active' : 'navlink';
+    const c = counts[n.href];
+    const dot = c ? ` <span class="dot">${escapeHtml(String(c))}</span>` : '';
+    return `<a href="${n.href}" class="${cls}">${escapeHtml(n.label)}${dot}</a>`;
   }).join('');
 }
 
@@ -42,6 +40,11 @@ function brandmark() {
   </a>`;
 }
 
+function initials(name) {
+  const s = String(name || '').trim();
+  return s ? s.slice(0, 1).toUpperCase() : 'A';
+}
+
 /**
  * @param {object} o
  * @param {string} o.title
@@ -49,8 +52,9 @@ function brandmark() {
  * @param {string} o.body      - HTML del contenuto
  * @param {Array}  [o.breadcrumb] - [{label, href?}]
  * @param {string} [o.active]  - href della voce di nav attiva
+ * @param {object} [o.counts]  - { '/admin/revisioni': 5, '/admin/bacheca': 3 } badge contatori
  */
-function adminLayout({ title, user, body, breadcrumb = [], active = '' }) {
+function adminLayout({ title, user, body, breadcrumb = [], active = '', counts = {} }) {
   const bcHtml = breadcrumb.map((b, i) => {
     const sep = i > 0 ? '<span class="sep">›</span>' : '';
     const inner = b.href
@@ -59,6 +63,8 @@ function adminLayout({ title, user, body, breadcrumb = [], active = '' }) {
     return sep + inner;
   }).join('');
 
+  const username = (user && user.username) || '';
+
   return `<!doctype html>
 <html lang="it"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -66,14 +72,17 @@ function adminLayout({ title, user, body, breadcrumb = [], active = '' }) {
 <link rel="icon" href="/assets/brand/accademia-logo.jpg">
 <link rel="stylesheet" href="/css/app.css">
 </head><body class="app-body">
-<header class="topbar">
-  ${brandmark()}
-  <nav class="nav">
-    ${navHtml(active)}
-    <span class="nav-user">${escapeHtml(user && user.username || '')}</span>
-    <form method="POST" action="/logout" style="display:inline">
-      <button type="submit" class="btn btn-ghost">Esci</button>
+<header class="topbar2">
+  <div class="row1">
+    ${brandmark()}
+    <span class="spacer"></span>
+    <span class="who2"><span class="av">${escapeHtml(initials(username))}</span><span class="who-name">${escapeHtml(username)}</span></span>
+    <form method="POST" action="/logout" class="logout-form">
+      <button type="submit" class="btn btn-ghost btn-logout">Esci</button>
     </form>
+  </div>
+  <nav class="row2" aria-label="Navigazione amministrazione">
+    ${navHtml(active, counts)}
   </nav>
 </header>
 <main class="container">

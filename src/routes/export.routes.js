@@ -20,7 +20,7 @@
 
 const express = require('express');
 const exportService = require('../services/export.service');
-const { adminLayout, escapeHtml } = require('../views/adminLayout');
+const { adminLayout } = require('../views/adminLayout');
 
 const router = express.Router();
 
@@ -47,26 +47,45 @@ function exportError(res, e) {
 // =====================================================================
 router.get('/export', (req, res) => {
   const body = `
-    <h1>Export / Stampe</h1>
-    <p class="muted">Genera file PDF e XLSX. I file vengono scaricati dal browser; per stampare basta aprire il PDF e usare la stampa del browser. Nessuna stampa automatica al check-in.</p>
+    <header class="page-head">
+      <p class="eyebrow">Sistema</p>
+      <h1>Export e stampe</h1>
+      <p class="muted">Genera file XLSX e PDF da scaricare. Per stampare, apri il PDF e usa la stampa del browser. Nessuna stampa automatica al check-in.</p>
+    </header>
 
-    <section class="card">
+    <section class="card section-gap">
       <h2>Export globali (XLSX)</h2>
-      <div class="filter-bar">
-        <a class="btn btn-primary" href="/admin/export/clienti.xlsx">Clienti XLSX</a>
-        <a class="btn btn-primary" href="/admin/export/pagamenti.xlsx">Pagamenti XLSX</a>
-        <a class="btn btn-primary" href="/admin/export/movimenti.xlsx">Movimenti XLSX</a>
+      <p class="muted small" style="margin-top:4px">Esporta l'intero archivio in formato Excel.</p>
+      <div class="export-grid">
+        <a class="export-tile" href="/admin/export/clienti.xlsx">
+          <span class="export-fmt">XLSX</span>
+          <span class="export-name">Clienti</span>
+          <span class="muted small">Anagrafica e stato di tutti i clienti</span>
+          <span class="export-cta">Scarica →</span>
+        </a>
+        <a class="export-tile" href="/admin/export/pagamenti.xlsx">
+          <span class="export-fmt">XLSX</span>
+          <span class="export-name">Pagamenti</span>
+          <span class="muted small">Storico pagamenti registrati</span>
+          <span class="export-cta">Scarica →</span>
+        </a>
+        <a class="export-tile" href="/admin/export/movimenti.xlsx">
+          <span class="export-fmt">XLSX</span>
+          <span class="export-name">Movimenti</span>
+          <span class="muted small">Ledger ingressi (saldo derivato)</span>
+          <span class="export-cta">Scarica →</span>
+        </a>
       </div>
     </section>
 
-    <section class="card">
+    <section class="card section-gap">
       <h2>Export per cliente</h2>
-      <p class="muted small">Apri il <a href="/admin/clienti">dettaglio di un cliente</a> per i bottoni PDF/XLSX di scheda e report. Dall'editor o dalla revisione di una seduta è disponibile il PDF della seduta.</p>
+      <p class="muted small" style="margin-top:4px">Apri il <a href="/admin/clienti">dettaglio di un cliente</a> per i bottoni PDF/XLSX di scheda e report. Dall'editor o dalla revisione di una seduta è disponibile il PDF della seduta.</p>
     </section>
 
-    <section class="card">
+    <section class="card section-gap">
       <h2>Stampa manuale</h2>
-      <p class="muted small">La stampa è sempre manuale: scarica o apri il PDF e usa la funzione di stampa del browser (Ctrl+P). Il sistema non stampa nulla automaticamente.</p>
+      <p class="muted small" style="margin-top:4px">La stampa è sempre manuale: scarica o apri il PDF e usa la funzione di stampa del browser (Ctrl+P). Il sistema non stampa nulla automaticamente.</p>
     </section>
   `;
   res.send(adminLayout({

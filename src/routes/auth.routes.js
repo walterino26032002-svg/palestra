@@ -14,10 +14,7 @@ const CLIENTE_HOME = '/cliente';
 // -------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------
-function wantsHtml(req) {
-  const accept = (req.headers.accept || '').toLowerCase();
-  return accept.includes('text/html') && !accept.includes('application/json');
-}
+const { wantsHtml, escapeHtml } = require('../utils/helpers');
 
 function renderAdminLogin(req, res, error) {
   res.send(buildAdminLoginHtml({ error }));
@@ -39,11 +36,11 @@ function authHead(title) {
 </head><body class="auth-body">`;
 }
 
-function authBrand() {
+function authBrand(sub) {
   return `<div class="auth-brand">
     <img src="/assets/brand/accademia-logo.jpg" alt="Accademia" class="auth-logo">
     <div class="auth-brand-name">Accademia</div>
-    <div class="auth-brand-sub">Élite Training Club · Maletto</div>
+    <div class="auth-brand-sub">${escapeHtml(sub || 'Élite Training Club')}</div>
   </div>`;
 }
 
@@ -51,7 +48,7 @@ function buildAdminLoginHtml({ error } = {}) {
   const errBlock = error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : '';
   return `${authHead('Area riservata')}
 <main class="auth-card">
-  ${authBrand()}
+  ${authBrand('Élite Training Club')}
   <h1>Area riservata</h1>
   <p class="muted">Accesso allo staff dell'Accademia</p>
   ${errBlock}
@@ -62,9 +59,9 @@ function buildAdminLoginHtml({ error } = {}) {
     <label>Password
       <input name="password" type="password" required>
     </label>
-    <button type="submit" class="btn btn-primary btn-block">Entra</button>
+    <button type="submit" class="btn btn-primary btn-block">Entra nel pannello</button>
   </form>
-  <p class="muted small auth-switch">Sei un atleta? <a href="/cliente/login">Vai all'area allenamento</a></p>
+  <p class="auth-switch">Sei un atleta? <a href="/cliente/login">Vai all'area allenamento</a></p>
 </main>
 </body></html>`;
 }
@@ -73,9 +70,9 @@ function buildClienteLoginHtml({ error } = {}) {
   const errBlock = error ? `<div class="alert alert-error">${escapeHtml(error)}</div>` : '';
   return `${authHead('Area allenamento')}
 <main class="auth-card auth-card-cliente">
-  ${authBrand()}
+  ${authBrand('Allenati · Registra · Migliora')}
   <h1>Accedi alla tua scheda</h1>
-  <p class="muted">Allenati. Registra. Migliora.</p>
+  <p class="muted">L'allenamento di oggi ti aspetta</p>
   ${errBlock}
   <form method="POST" action="/cliente/login" autocomplete="off">
     <label>Nome utente, email o telefono
@@ -84,17 +81,11 @@ function buildClienteLoginHtml({ error } = {}) {
     <label>Password
       <input name="password" type="password" autocomplete="off" required>
     </label>
-    <button type="submit" class="btn btn-primary btn-block">Accedi</button>
+    <button type="submit" class="btn btn-primary btn-block">Accedi alla tua scheda</button>
   </form>
-  <p class="muted small auth-switch">Sei dello staff? <a href="/login">Area riservata</a></p>
+  <p class="auth-switch">Sei dello staff? <a href="/login">Area riservata</a></p>
 </main>
 </body></html>`;
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // -------------------------------------------------------------

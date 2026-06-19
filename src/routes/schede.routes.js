@@ -30,41 +30,39 @@ const revisioniService  = require('../services/revisioni.service');
 
 const router = express.Router();
 
-// =====================================================================
-// Helpers
-// =====================================================================
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function alertBlock(kind, msg) {
-  if (!msg) return '';
-  return `<div class="alert alert-${escapeHtml(kind)}">${escapeHtml(msg)}</div>`;
-}
-
-function backWithMsg(res, base, msg, kind = 'ok') {
-  const sep = base.includes('?') ? '&' : '?';
-  return res.redirect(303, `${base}${sep}${kind}=${encodeURIComponent(msg)}`);
-}
-
-function wantsHtml(req) {
-  const accept = (req.headers.accept || '').toLowerCase();
-  return accept.includes('text/html') && !accept.includes('application/json');
-}
-
 const { adminLayout } = require('../views/adminLayout');
+const { escapeHtml, wantsHtml, alertBlock, backWithMsg } = require('../utils/helpers');
+
+const STATO_LABEL = {
+  BOZZA:      'Bozza',
+  PROSSIMA:   'Prossima',
+  COMPLETATA: 'Completata',
+  SALTATA:    'Saltata',
+};
 
 function statoBadge(stato) {
   const map = {
     BOZZA:      'muted',
-    PROSSIMA:   'ok',
+    PROSSIMA:   'strong',
     COMPLETATA: 'ok',
     SALTATA:    'danger',
   };
   const tone = map[stato] || 'muted';
-  return `<span class="badge badge-${tone}">${escapeHtml(stato)}</span>`;
+  const label = STATO_LABEL[stato] || stato;
+  return `<span class="badge badge-${tone}">${escapeHtml(label)}</span>`;
+}
+
+// Variante per le card: BOZZA è lo stato "neutro" di default e non merita
+// un badge invasivo, quindi viene reso in modo molto discreto. Gli stati
+// rilevanti (Prossima/Completata/Saltata) restano ben visibili.
+function statoBadgeImportante(stato) {
+  if (stato === 'BOZZA') return '';
+  return statoBadge(stato);
+}
+
+// Badge mostrato solo per stati "importanti": BOZZA resta discreto/nascosto.
+function statoBadgeImportante(stato) {
+  return stato === 'BOZZA' ? '' : statoBadge(stato);
 }
 
 // =====================================================================
@@ -73,31 +71,54 @@ function statoBadge(stato) {
 router.get('/schede', (req, res) => {
   const q = req.query.q || '';
   const clienti = clientiService.listClienti({ q });
-  const rows = clienti.map((c) => {
-    const r = schedeService.riepilogoCliente(c.id);
+  const data = clienti.map((c) => ({ c, r: schedeService.riepilogoCliente(c.id) }));
+
+  const rows = data.map(({ c, r }) => {
     const prossima = r.prossima_seduta
       ? `<a href="/admin/sedute/${r.prossima_seduta.id}">#${r.prossima_seduta.id}</a>`
       : '<span class="muted">—</span>';
+    const scheda = r.ha_scheda
+      ? `<span class="num">${r.blocchi_count}</span> blocchi · <span class="num">${r.sedute_totali}</span> sedute`
+      : '<span class="badge badge-warn">Senza scheda</span>';
     return `<tr>
-      <td><a href="/admin/clienti/${c.id}">#${c.id}</a></td>
+      <td class="muted">#${c.id}</td>
       <td>${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</td>
-      <td>${r.ha_scheda ? `${r.blocchi_count} blocchi · ${r.sedute_totali} sedute` : '<span class="badge badge-warn">Senza scheda</span>'}</td>
+      <td>${scheda}</td>
       <td>${prossima}</td>
-      <td><a class="btn" href="/admin/clienti/${c.id}/scheda">Apri scheda</a></td>
+      <td class="col-right"><a class="btn" href="/admin/clienti/${c.id}/scheda">Apri scheda</a></td>
     </tr>`;
   }).join('') || `<tr><td colspan="5" class="muted">Nessun cliente.</td></tr>`;
 
+  const cards = data.map(({ c, r }) => {
+    const prossima = r.prossima_seduta
+      ? `<b><a href="/admin/sedute/${r.prossima_seduta.id}">#${r.prossima_seduta.id}</a></b>`
+      : '<span class="muted">—</span>';
+    const scheda = r.ha_scheda
+      ? `${r.blocchi_count} blocchi · ${r.sedute_totali} sedute`
+      : '<span class="badge badge-warn">Senza scheda</span>';
+    return `<div class="row-card">
+      <div class="rc-top"><div class="t">${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</div><span class="muted small">#${c.id}</span></div>
+      <div class="rc-meta"><span>${scheda}</span><span>PROSSIMA: ${prossima}</span></div>
+      <div class="rc-act"><a class="btn" href="/admin/clienti/${c.id}/scheda">Apri scheda</a></div>
+    </div>`;
+  }).join('') || `<div class="card muted">Nessun cliente.</div>`;
+
   const body = `
-    <h1>Schede allenamento</h1>
+    <div class="page-head">
+      <span class="eyebrow">Allenamento</span>
+      <h1>Schede allenamento</h1>
+      <p class="muted small">Apri la scheda di un cliente per gestire blocchi, settimane e sedute.</p>
+    </div>
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
     <form method="GET" action="/admin/schede" class="filter-bar">
       <input type="text" name="q" placeholder="Cerca cliente" value="${escapeHtml(q)}">
       <button type="submit" class="btn">Cerca</button>
     </form>
     <table class="table">
-      <thead><tr><th>ID</th><th>Cliente</th><th>Scheda</th><th>PROSSIMA</th><th>Azioni</th></tr></thead>
+      <thead><tr><th>ID</th><th>Cliente</th><th>Scheda</th><th>PROSSIMA</th><th class="col-right">Azioni</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    <div class="card-list">${cards}</div>
   `;
   res.send(adminLayout({
     title: 'Schede',
@@ -118,8 +139,8 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
   const riepilogo = schedeService.riepilogoCliente(clienteId);
 
   const blocchiHtml = riepilogo.blocchi.length === 0
-    ? `<div class="card muted">Nessun blocco. Clicca "Crea blocco 4 settimane" per iniziare (20 sedute BOZZA).</div>`
-    : riepilogo.blocchi.map((b) => {
+    ? `<div class="card muted">Nessun blocco. Usa il form qui sopra per crearne uno.</div>`
+    : riepilogo.blocchi.map((b, i) => {
         const sedute = seduteService.listSeduteBlocco(b.id);
         const gruppi = {};
         for (const s of sedute) {
@@ -129,44 +150,65 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
         }
         const gridSettimane = Object.keys(gruppi).sort().map((sett) => `
           <div class="settimana">
-            <h3 style="margin:8px 0">${escapeHtml(sett)}</h3>
-            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+            <h3 class="eyebrow" style="margin:16px 0 10px">${escapeHtml(sett)}</h3>
+            <div class="sedute-grid">
               ${gruppi[sett].map((s) => `
-                <a class="card seduta-card" href="/admin/sedute/${s.id}">
-                  <div><strong>Seduta ${s.indice_seduta}</strong></div>
-                  <div>${statoBadge(s.stato)}</div>
-                  <div class="muted small">${s.esercizi_count || 0} esercizi</div>
-                  ${s.titolo ? `<div class="muted small">${escapeHtml(s.titolo)}</div>` : ''}
+                <a class="card seduta-card${s.stato === 'BOZZA' ? ' is-bozza' : ''}" href="/admin/sedute/${s.id}">
+                  <div class="sc-head">
+                    <span class="sc-title">Seduta ${s.indice_seduta}</span>
+                    ${statoBadgeImportante(s.stato)}
+                  </div>
+                  <div class="sc-ex">${s.esercizi_count || 0} esercizi</div>
+                  <div class="sc-meta">${escapeHtml(sett)}</div>
+                  ${s.titolo ? `<div class="sc-meta">${escapeHtml(s.titolo)}</div>` : ''}
                 </a>
               `).join('')}
             </div>
           </div>
         `).join('');
 
+        const pc = b.sedute_totali ? Math.round((b.sedute_completate / b.sedute_totali) * 100) : 0;
+        const aperto = i === 0 ? ' open' : '';
+
         return `
-          <div class="card" style="margin-bottom:12px">
-            <div class="row-between">
-              <div>
-                <h2 style="margin:0">${escapeHtml(b.nome)} <span class="muted small">(${b.sedute_totali} sedute)</span></h2>
-                <p class="muted small">Dal ${escapeHtml(b.data_inizio)} · ${b.sedute_completate}/${b.sedute_totali} completate · ${b.sedute_saltate || 0} saltate${b.archiviato ? ' · <span class="badge badge-muted">archiviato</span>' : ''}</p>
+          <details class="workout-block"${aperto}>
+            <summary class="workout-block-summary">
+              <div class="wb-info">
+                <span class="wb-chevron" aria-hidden="true">›</span>
+                <div>
+                  <span class="wb-name">${escapeHtml(b.nome)}</span>
+                  <span class="wb-sub">Dal ${escapeHtml(b.data_inizio)} · ${b.sedute_completate}/${b.sedute_totali} completate</span>
+                </div>
               </div>
-              <form method="POST" action="/admin/blocchi/${b.id}/archivia" style="display:inline">
-                <button type="submit" class="btn btn-ghost">${b.archiviato ? 'Ripristina' : 'Archivia'}</button>
-              </form>
+              <span class="wb-pc">${pc}%</span>
+            </summary>
+            <div class="workout-block-body">
+              <div class="seduta-progress" style="margin-top:0">
+                <div class="track"><div class="fill" style="width:${pc}%"></div></div>
+                <span class="pc">${pc}%</span>
+              </div>
+              <div class="inset-grid">
+                <div class="inset"><div class="l">Sedute</div><div class="vv">${b.sedute_totali}</div></div>
+                <div class="inset"><div class="l">Completate</div><div class="vv">${b.sedute_completate}</div></div>
+                <div class="inset"><div class="l">Saltate</div><div class="vv${(b.sedute_saltate || 0) === 0 ? ' dash' : ''}">${b.sedute_saltate || 0}</div></div>
+              </div>
+              ${gridSettimane}
             </div>
-            ${gridSettimane}
-          </div>
+          </details>
         `;
       }).join('');
 
   const prossimaBox = riepilogo.prossima_seduta
     ? `<div class="alert alert-ok">Seduta PROSSIMA: <strong>#${riepilogo.prossima_seduta.id}</strong> — <a href="/admin/sedute/${riepilogo.prossima_seduta.id}">apri editor</a></div>`
-    : `<div class="alert alert-error">Nessuna seduta PROSSIMA. Il cliente NON vedrà allenamento al check-in finché non ne imposti una.</div>`;
+    : `<div class="alert alert-error">Nessuna seduta PROSSIMA. Il cliente NON vedrà l'allenamento al check-in finché non ne imposti una.</div>`;
 
   const body = `
     <div class="row-between">
-      <h1>Scheda — ${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} <span class="muted small">#${cliente.id}</span></h1>
-      <div>
+      <div class="page-head" style="margin:0">
+        <span class="eyebrow">Scheda allenamento</span>
+        <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} <span class="muted small">#${cliente.id}</span></h1>
+      </div>
+      <div class="toolbar">
         <a class="btn" href="/admin/clienti/${cliente.id}">← Dettaglio cliente</a>
       </div>
     </div>
@@ -174,13 +216,18 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
     ${prossimaBox}
 
-    <h2>Crea blocco</h2>
-    <form method="POST" action="/admin/clienti/${cliente.id}/blocchi" class="card form-inline">
-      <label>Nome blocco <input name="nome" placeholder="es. Blocco Forza 1" required></label>
-      <label>Data inizio <input name="data_inizio" type="date" value="${new Date().toISOString().slice(0,10)}"></label>
-      <label>Settimane <input name="settimane" type="number" min="1" value="4" required></label>
-      <label>Sedute/sett. <input name="sedute_per_settimana" type="number" min="1" value="5" required></label>
-      <button type="submit" class="btn btn-primary">Crea blocco (4×5 = 20 sedute BOZZA)</button>
+    <h2 style="margin-top:8px">Crea blocco</h2>
+    <form method="POST" action="/admin/clienti/${cliente.id}/blocchi" class="card create-block">
+      <div class="cb-grid">
+        <label class="field">Nome blocco <input name="nome" placeholder="es. Blocco Forza 1" required></label>
+        <label class="field">Data inizio <input name="data_inizio" type="date" value="${new Date().toISOString().slice(0,10)}"></label>
+        <label class="field">Settimane <input name="settimane" type="number" min="1" value="4" required></label>
+        <label class="field">Sedute a settimana <input name="sedute_per_settimana" type="number" min="1" value="5" required></label>
+      </div>
+      <div class="cb-foot">
+        <p class="hint">Verranno create automaticamente le sedute in bozza per ogni settimana.</p>
+        <button type="submit" class="btn btn-primary">Crea blocco</button>
+      </div>
     </form>
 
     <h2 style="margin-top:24px">Blocchi</h2>
@@ -286,14 +333,17 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
 
   const prossimaDisabled = seduta.stato === 'PROSSIMA' ? 'disabled' : '';
   const statoOptions = seduteService.STATI.map((s) =>
-    `<option value="${s}" ${s === seduta.stato ? 'selected' : ''}>${s}</option>`
+    `<option value="${s}" ${s === seduta.stato ? 'selected' : ''}>${escapeHtml(STATO_LABEL[s] || s)}</option>`
   ).join('');
 
   const body = `
-    <div class="row-between">
-      <h1>Seduta #${seduta.id} — Settimana ${seduta.indice_settimana} · Seduta ${seduta.indice_seduta} ${statoBadge(seduta.stato)}</h1>
+    <div class="page-head row-between">
       <div>
-        <a class="btn" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
+        <span class="eyebrow">Editor seduta</span>
+        <h1>Seduta #${seduta.id} <span class="muted small">Settimana ${seduta.indice_settimana} · Seduta ${seduta.indice_seduta}</span> ${statoBadge(seduta.stato)}</h1>
+      </div>
+      <div class="toolbar">
+        <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
         <a class="btn" href="/admin/clienti/${seduta.cliente_id}/scheda">← Scheda cliente</a>
       </div>
     </div>
@@ -301,28 +351,31 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
     <section class="card">
-      <div class="row-between">
+      <div class="row-between" style="margin-bottom:0">
         <div>
-          <p class="muted small">Blocco: <strong>${escapeHtml(seduta.blocco_nome)}</strong> · Cliente: <a href="/admin/clienti/${seduta.cliente_id}">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</a></p>
-          ${seduta.titolo ? `<p>${escapeHtml(seduta.titolo)}</p>` : ''}
+          <span class="eyebrow">${escapeHtml(seduta.blocco_nome)}</span>
+          <p class="muted small" style="margin-top:4px">Cliente: <a href="/admin/clienti/${seduta.cliente_id}">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</a></p>
+          ${seduta.titolo ? `<p style="margin-top:4px"><strong>${escapeHtml(seduta.titolo)}</strong></p>` : ''}
         </div>
-        <div>
-          <form method="POST" action="/admin/sedute/${seduta.id}/prossima" style="display:inline">
-            <button type="submit" class="btn btn-primary" ${prossimaDisabled}>Imposta come PROSSIMA</button>
-          </form>
-        </div>
+        <form method="POST" action="/admin/sedute/${seduta.id}/prossima" style="display:inline">
+          <button type="submit" class="btn btn-primary" ${prossimaDisabled}>Imposta come PROSSIMA</button>
+        </form>
       </div>
 
-      <form method="POST" action="/admin/sedute/${seduta.id}/stato" class="form-inline" style="margin-top:8px">
-        <label>Stato
-          <select name="stato">${statoOptions}</select>
-        </label>
-        <label>Titolo <input name="titolo" value="${escapeHtml(seduta.titolo || '')}"></label>
-        <button type="submit" class="btn">Aggiorna stato</button>
-      </form>
+      <details class="stato-adv" style="margin-top:16px">
+        <summary class="muted small">Stato seduta (avanzato)</summary>
+        <p class="muted small" style="margin-top:8px">Ogni cliente dovrebbe avere una sola seduta <strong>Prossima</strong> alla volta. Usa il pulsante qui sopra per impostarla; modifica lo stato manuale solo se necessario (es. segnare come <strong>Saltata</strong> o riportare a <strong>Bozza</strong>).</p>
+        <form method="POST" action="/admin/sedute/${seduta.id}/stato" class="form-inline" style="margin-top:10px">
+          <label>Stato
+            <select name="stato">${statoOptions}</select>
+          </label>
+          <label>Titolo <input name="titolo" value="${escapeHtml(seduta.titolo || '')}"></label>
+          <button type="submit" class="btn">Aggiorna stato</button>
+        </form>
+      </details>
     </section>
 
-    <h2 style="margin-top:20px">Esercizi</h2>
+    <h2 style="margin-top:24px">Esercizi</h2>
     <div class="card" style="overflow-x:auto">
       <table class="table excel-table" id="eserciziTable">
         <thead><tr>
@@ -555,27 +608,53 @@ router.get('/revisioni', (req, res) => {
     return res.json({ ok: true, sedute });
   }
 
+  const fmtDt = (v) => v ? escapeHtml(String(v).replace('T', ' ').slice(0, 16)) : '<span class="muted">—</span>';
+  const statoRev = (s) => s.revisionato_il
+    ? '<span class="badge badge-ok">Revisionata</span>'
+    : '<span class="badge badge-warn">Da revisionare</span>';
+
   const rows = sedute.map((s) => `
     <tr>
       <td><a href="/admin/clienti/${s.cliente_id}">${escapeHtml(s.cliente_cognome)} ${escapeHtml(s.cliente_nome)}</a></td>
       <td>${escapeHtml(s.blocco_nome)} · Sett. ${s.indice_settimana} · Seduta ${s.indice_seduta}</td>
-      <td>${s.voto != null ? escapeHtml(s.voto) + '/5' : '<span class="muted">—</span>'}</td>
-      <td>${s.inviato_il ? escapeHtml(String(s.inviato_il).replace('T', ' ').slice(0, 16)) : '<span class="muted">—</span>'}</td>
-      <td>${s.revisionato_il ? '<span class="badge badge-ok">revisionata</span>' : '<span class="badge badge-warn">da revisionare</span>'}</td>
-      <td><a class="btn" href="/admin/sedute/${s.seduta_id}/revisione">Apri revisione</a></td>
+      <td class="num">${s.voto != null ? escapeHtml(s.voto) + '/5' : '<span class="muted">—</span>'}</td>
+      <td class="hide-mobile">${fmtDt(s.inviato_il)}</td>
+      <td>${statoRev(s)}</td>
+      <td class="col-right"><a class="btn small" href="/admin/sedute/${s.seduta_id}/revisione">Apri revisione</a></td>
     </tr>`).join('') || `<tr><td colspan="6" class="muted">Nessuna seduta da revisionare.</td></tr>`;
 
+  const cards = sedute.map((s) => `
+    <div class="row-card">
+      <div class="rc-top">
+        <span class="t"><a href="/admin/clienti/${s.cliente_id}">${escapeHtml(s.cliente_cognome)} ${escapeHtml(s.cliente_nome)}</a></span>
+        ${statoRev(s)}
+      </div>
+      <div class="rc-meta">
+        <span>${escapeHtml(s.blocco_nome)} · Sett. ${s.indice_settimana} · Seduta ${s.indice_seduta}</span>
+        <span>Voto: <b>${s.voto != null ? escapeHtml(s.voto) + '/5' : '—'}</b></span>
+        <span>Inviata: <b>${s.inviato_il ? escapeHtml(String(s.inviato_il).replace('T', ' ').slice(0, 16)) : '—'}</b></span>
+      </div>
+      <div class="rc-act"><a class="btn small" href="/admin/sedute/${s.seduta_id}/revisione">Apri revisione</a></div>
+    </div>`).join('') || `<div class="empty-state"><h3>Nessuna seduta da revisionare</h3><p class="muted">Gli allenamenti completati dai clienti compariranno qui.</p></div>`;
+
   const body = `
-    <h1>Revisioni</h1>
+    <header class="page-head">
+      <p class="eyebrow">Operatività</p>
+      <h1>Revisioni</h1>
+      <p class="muted">Allenamenti completati dai clienti in attesa di revisione del coach.</p>
+    </header>
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
     <div class="filter-bar">
       <a class="btn ${!includeAll ? 'btn-primary' : ''}" href="/admin/revisioni">Da revisionare</a>
       <a class="btn ${includeAll ? 'btn-primary' : ''}" href="/admin/revisioni?tutte=1">Tutte le completate</a>
     </div>
-    <table class="table">
-      <thead><tr><th>Cliente</th><th>Seduta</th><th>Voto</th><th>Inviata</th><th>Stato</th><th>Azioni</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div class="table-wrap hide-mobile">
+      <table class="table">
+        <thead><tr><th>Cliente</th><th>Seduta</th><th>Voto</th><th>Inviata</th><th>Stato</th><th class="col-right">Azioni</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="card-list">${cards}</div>
   `;
   res.send(adminLayout({
     title: 'Revisioni',
