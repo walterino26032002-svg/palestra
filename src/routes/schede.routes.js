@@ -52,14 +52,6 @@ function statoBadge(stato) {
   return `<span class="badge badge-${tone}">${escapeHtml(label)}</span>`;
 }
 
-// Variante per le card: BOZZA è lo stato "neutro" di default e non merita
-// un badge invasivo, quindi viene reso in modo molto discreto. Gli stati
-// rilevanti (Prossima/Completata/Saltata) restano ben visibili.
-function statoBadgeImportante(stato) {
-  if (stato === 'BOZZA') return '';
-  return statoBadge(stato);
-}
-
 // Badge mostrato solo per stati "importanti": BOZZA resta discreto/nascosto.
 function statoBadgeImportante(stato) {
   return stato === 'BOZZA' ? '' : statoBadge(stato);
