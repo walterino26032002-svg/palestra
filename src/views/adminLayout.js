@@ -10,21 +10,22 @@ const { escapeHtml } = require('../utils/helpers');
 
 // Voci di navigazione admin (coerenti ovunque). `active` evidenzia la sezione.
 const NAV = [
-  { href: '/admin',          label: 'Bacheca operativa' },
-  { href: '/admin/clienti',  label: 'Clienti' },
-  { href: '/admin/servizi',  label: 'Servizi' },
-  { href: '/admin/schede',   label: 'Schede' },
-  { href: '/admin/revisioni',label: 'Revisioni' },
-  { href: '/admin/nfc',      label: 'Tessere' },
-  { href: '/admin/bacheca',  label: 'Avvisi' },
-  { href: '/admin/export',   label: 'Export' },
-  { href: '/admin/backup',   label: 'Backup' },
+  { href: '/admin',         label: 'Bacheca',        countHref: '/admin/bacheca' },
+  { href: '/admin/clienti', label: 'Clienti' },
+  { href: '/admin/servizi', label: 'Pacchetti' },
+  { href: '/admin/schede',  label: 'Allenamenti',    countHref: '/admin/revisioni',
+    activeOn: ['/admin/revisioni'] },
+  { href: '/admin/nfc',     label: 'NFC / Ingressi' },
+  { href: '/admin/export',  label: 'Sistema',
+    activeOn: ['/admin/backup'] },
 ];
 
 function navHtml(active, counts = {}) {
   return NAV.map((n) => {
-    const cls = active === n.href ? 'navlink active' : 'navlink';
-    const c = counts[n.href];
+    const isActive = active === n.href ||
+      (n.activeOn && n.activeOn.some(p => (active || '').startsWith(p)));
+    const cls = isActive ? 'navlink active' : 'navlink';
+    const c = counts[n.countHref || n.href];
     const dot = c ? ` <span class="dot">${escapeHtml(String(c))}</span>` : '';
     return `<a href="${n.href}" class="${cls}">${escapeHtml(n.label)}${dot}</a>`;
   }).join('');
