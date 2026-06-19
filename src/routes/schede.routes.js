@@ -713,9 +713,10 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
 
   const body = `
     <div class="row-between">
-      <h1>Revisione — ${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</h1>
+      <h1>Revisione — <a href="/admin/clienti/${cliente.id}">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</a></h1>
       <div>
-        <a class="btn" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
+        <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
+        <a class="btn" href="/admin/clienti/${cliente.id}/scheda">← Scheda cliente</a>
         <a class="btn" href="/admin/revisioni">← Revisioni</a>
       </div>
     </div>
@@ -751,7 +752,7 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
 
     <h2 style="margin-top:20px">Prepara prossima seduta</h2>
     <section class="card">
-      <p class="muted small">Copia gli esercizi di questa seduta nel primo slot BOZZA successivo dello stesso blocco e lo imposta come PROSSIMA. I feedback non vengono copiati. Nessun movimento ingressi.</p>
+      <p class="muted small">Copia gli esercizi e prepara la prossima seduta da far svolgere al cliente. I feedback non vengono copiati.</p>
       ${prossimaForm}
     </section>
   `;
@@ -762,7 +763,7 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
     breadcrumb: [
       { label: 'Bacheca', href: '/admin' },
       { label: 'Revisioni', href: '/admin/revisioni' },
-      { label: `Seduta #${seduta.id}` },
+      { label: `Revisione` },
     ],
   }));
 });
