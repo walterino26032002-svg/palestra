@@ -19,17 +19,7 @@ const { adminLayout } = require('../views/adminLayout');
 const router = express.Router();
 const apiRouter = express.Router();
 
-const { escapeHtml, alertBlock, backWithMsg } = require('../utils/helpers');
-
-function fmtDateTime(iso) {
-  if (!iso) return '';
-  return String(iso).replace('T', ' ').slice(0, 19);
-}
-
-function fmtDate(iso) {
-  if (!iso) return '';
-  return String(iso).slice(0, 10);
-}
+const { escapeHtml, alertBlock, backWithMsg, fmtDateShort, fmtDateTimeFull } = require('../utils/helpers');
 
 // Contatori per i badge della navbar (revisioni da fare + avvisi non letti)
 function buildCounts() {
@@ -85,7 +75,7 @@ router.get('/nfc', (req, res) => {
       <td><code>${escapeHtml(t.tessera_uid)}</code></td>
       <td>${cliente}</td>
       <td>${statoBadgeT(t)}</td>
-      <td class="hide-mobile">${fmtDate(t.assegnata_il)}</td>
+      <td class="hide-mobile">${fmtDateShort(t.assegnata_il)}</td>
       <td class="col-right">
         <form method="POST" action="/admin/nfc/${t.id}/toggle-attiva" style="display:inline">
           <button type="submit" class="btn btn-ghost small">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
@@ -105,7 +95,7 @@ router.get('/nfc', (req, res) => {
       </div>
       <div class="rc-meta">
         <span>Cliente: ${cliente}</span>
-        <span>Assegnata: <b>${fmtDate(t.assegnata_il) || '—'}</b></span>
+        <span>Assegnata: <b>${fmtDateShort(t.assegnata_il) || '—'}</b></span>
       </div>
       <div class="rc-act">
         <form method="POST" action="/admin/nfc/${t.id}/toggle-attiva" style="display:inline">
@@ -431,7 +421,7 @@ router.get('/bacheca', (req, res) => {
   const rows = avvisi.map((a) => `
     <tr>
       <td class="muted num">#${a.id}</td>
-      <td class="muted">${fmtDateTime(a.creato_il)}</td>
+      <td class="muted">${fmtDateTimeFull(a.creato_il)}</td>
       <td>${tipoBadge(a.tipo)}</td>
       <td>${clienteCell(a)}</td>
       <td>${escapeHtml(a.messaggio)}</td>
@@ -448,7 +438,7 @@ router.get('/bacheca', (req, res) => {
       </div>
       <p style="margin:8px 0 0">${escapeHtml(a.messaggio)}</p>
       <div class="rc-meta">
-        <span>${fmtDateTime(a.creato_il)}</span>
+        <span>${fmtDateTimeFull(a.creato_il)}</span>
         ${a.cliente_id ? `<span>${clienteCell(a)}</span>` : ''}
       </div>
       ${a.letto ? '' : `<div class="rc-act">${segnaForm(a)}</div>`}

@@ -20,18 +20,13 @@ const { adminLayout } = require('../views/adminLayout');
 
 const router = express.Router();
 
-const { escapeHtml, wantsHtml, alertBlock, backWithMsg } = require('../utils/helpers');
+const { escapeHtml, wantsHtml, alertBlock, backWithMsg, fmtDateTimeFull } = require('../utils/helpers');
 
 function fmtSize(bytes) {
   const n = Number(bytes || 0);
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fmtDate(iso) {
-  if (!iso) return '';
-  return String(iso).replace('T', ' ').slice(0, 19);
 }
 
 // -------------------------------------------------------------
@@ -50,7 +45,7 @@ router.get('/backup', (req, res) => {
     <tr>
       <td><code>${escapeHtml(b.filename)}</code></td>
       <td class="num">${fmtSize(b.size)}</td>
-      <td class="hide-mobile">${escapeHtml(fmtDate(b.modificato_il))}</td>
+      <td class="hide-mobile">${escapeHtml(fmtDateTimeFull(b.modificato_il))}</td>
       <td class="col-right nowrap">
         <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Scarica</a>
         <form method="POST" action="/admin/backup/restore" style="display:inline"
@@ -67,7 +62,7 @@ router.get('/backup', (req, res) => {
         <span class="t"><code>${escapeHtml(b.filename)}</code></span>
         <span class="muted small">${fmtSize(b.size)}</span>
       </div>
-      <div class="rc-meta"><span>${escapeHtml(fmtDate(b.modificato_il))}</span></div>
+      <div class="rc-meta"><span>${escapeHtml(fmtDateTimeFull(b.modificato_il))}</span></div>
       <div class="rc-act">
         <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Scarica</a>
         <form method="POST" action="/admin/backup/restore" style="display:inline"
@@ -81,7 +76,7 @@ router.get('/backup', (req, res) => {
   const logRows = log.map((l) => `
     <tr>
       <td class="muted num">#${l.id}</td>
-      <td>${escapeHtml(fmtDate(l.creato_il))}</td>
+      <td>${escapeHtml(fmtDateTimeFull(l.creato_il))}</td>
       <td>${escapeHtml(l.tipo)}</td>
       <td>${l.esito === 'ok' ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-danger">Errore</span>'}</td>
       <td class="hide-mobile"><code>${escapeHtml(l.percorso)}</code></td>

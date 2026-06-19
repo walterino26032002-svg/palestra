@@ -21,17 +21,11 @@ const schedeService = require('../services/schede.service');
 const router = express.Router();
 
 const { adminLayout } = require('../views/adminLayout');
-const { escapeHtml, alertBlock, backWithMsg } = require('../utils/helpers');
+const { escapeHtml, alertBlock, backWithMsg, fmtDateTime } = require('../utils/helpers');
 
 function fmtEurFromCent(cent) {
   const n = Number(cent || 0) / 100;
   return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
-}
-
-function fmtDate(iso) {
-  if (!iso) return '';
-  // iso tipo 'YYYY-MM-DD HH:MM:SS' oppure ISO completo
-  return iso.replace('T', ' ').slice(0, 16);
 }
 
 // -------------------------------------------------------------
@@ -270,7 +264,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
   const pagRows = pagamenti.map((p) => `
     <tr>
       <td class="muted num">#${p.id}</td>
-      <td class="muted">${fmtDate(p.pagato_il)}</td>
+      <td class="muted">${fmtDateTime(p.pagato_il)}</td>
       <td>${escapeHtml(p.servizio_nome || '—')}</td>
       <td class="col-right num">${p.servizio_ingressi ?? '—'}</td>
       <td class="col-right num">${fmtEurFromCent(p.importo_cent)}</td>
@@ -281,7 +275,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
   const movRows = movimenti.map((m) => `
     <tr>
       <td class="muted num">#${m.id}</td>
-      <td class="muted">${fmtDate(m.creato_il)}</td>
+      <td class="muted">${fmtDateTime(m.creato_il)}</td>
       <td class="col-right num"${m.delta < 0 ? ' style="color:var(--danger)"' : ''}>${m.delta > 0 ? '+' : ''}${m.delta}</td>
       <td>${escapeHtml(m.motivo)}</td>
       <td class="col-right num">${m.riferimento_id ?? '—'}</td>

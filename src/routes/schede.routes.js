@@ -31,7 +31,7 @@ const revisioniService  = require('../services/revisioni.service');
 const router = express.Router();
 
 const { adminLayout } = require('../views/adminLayout');
-const { escapeHtml, wantsHtml, alertBlock, backWithMsg } = require('../utils/helpers');
+const { escapeHtml, wantsHtml, alertBlock, backWithMsg, fmtDateTime } = require('../utils/helpers');
 
 const STATO_LABEL = {
   BOZZA:      'Bozza',
@@ -600,7 +600,7 @@ router.get('/revisioni', (req, res) => {
     return res.json({ ok: true, sedute });
   }
 
-  const fmtDt = (v) => v ? escapeHtml(String(v).replace('T', ' ').slice(0, 16)) : '<span class="muted">—</span>';
+  const fmtDt = (v) => v ? escapeHtml(fmtDateTime(v)) : '<span class="muted">—</span>';
   const statoRev = (s) => s.revisionato_il
     ? '<span class="badge badge-ok">Revisionata</span>'
     : '<span class="badge badge-warn">Da revisionare</span>';
@@ -624,7 +624,7 @@ router.get('/revisioni', (req, res) => {
       <div class="rc-meta">
         <span>${escapeHtml(s.blocco_nome)} · Sett. ${s.indice_settimana} · Seduta ${s.indice_seduta}</span>
         <span>Voto: <b>${s.voto != null ? escapeHtml(s.voto) + '/5' : '—'}</b></span>
-        <span>Inviata: <b>${s.inviato_il ? escapeHtml(String(s.inviato_il).replace('T', ' ').slice(0, 16)) : '—'}</b></span>
+        <span>Inviata: <b>${s.inviato_il ? escapeHtml(fmtDateTime(s.inviato_il)) : '—'}</b></span>
       </div>
       <div class="rc-act"><a class="btn small" href="/admin/sedute/${s.seduta_id}/revisione">Apri revisione</a></div>
     </div>`).join('') || `<div class="empty-state"><h3>Nessuna seduta da revisionare</h3><p class="muted">Gli allenamenti completati dai clienti compariranno qui.</p></div>`;
@@ -709,7 +709,7 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
 
     <section class="card">
       <p class="muted small">${escapeHtml(seduta.blocco_nome)} · Settimana ${seduta.indice_settimana} · Seduta ${seduta.indice_seduta} ${statoBadge(seduta.stato)}</p>
-      ${fs.revisionato_il ? `<p><span class="badge badge-ok">Revisionata il ${escapeHtml(String(fs.revisionato_il).replace('T', ' ').slice(0, 16))}</span></p>` : '<p><span class="badge badge-warn">Non ancora revisionata</span></p>'}
+      ${fs.revisionato_il ? `<p><span class="badge badge-ok">Revisionata il ${escapeHtml(fmtDateTime(fs.revisionato_il))}</span></p>` : '<p><span class="badge badge-warn">Non ancora revisionata</span></p>'}
     </section>
 
     <h2 style="margin-top:20px">Feedback esercizi</h2>
@@ -724,7 +724,7 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
     <section class="card">
       <p>Voto complessivo: <strong>${fs.voto != null ? escapeHtml(fs.voto) + '/5' : '—'}</strong></p>
       <p>Commento: ${fs.commento ? escapeHtml(fs.commento) : '<span class="muted">nessuno</span>'}</p>
-      <p class="muted small">Inviato: ${fs.inviato_il ? escapeHtml(String(fs.inviato_il).replace('T', ' ').slice(0, 16)) : '—'}</p>
+      <p class="muted small">Inviato: ${fs.inviato_il ? escapeHtml(fmtDateTime(fs.inviato_il)) : '—'}</p>
     </section>
 
     <h2 style="margin-top:20px">Note del coach</h2>

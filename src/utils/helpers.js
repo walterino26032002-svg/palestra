@@ -23,4 +23,19 @@ function backWithMsg(res, base, msg, kind = 'ok') {
   return res.redirect(303, `${base}${sep}${kind}=${encodeURIComponent(msg)}`);
 }
 
-module.exports = { escapeHtml, wantsHtml, alertBlock, backWithMsg };
+function fmtDateShort(iso) {
+  if (!iso) return '';
+  return String(iso).slice(0, 10);
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  return String(iso).replace('T', ' ').slice(0, 16);
+}
+
+function fmtDateTimeFull(iso) {
+  if (!iso) return '';
+  return String(iso).replace('T', ' ').slice(0, 19);
+}
+
+module.exports = { escapeHtml, wantsHtml, alertBlock, backWithMsg, fmtDateShort, fmtDateTime, fmtDateTimeFull };
