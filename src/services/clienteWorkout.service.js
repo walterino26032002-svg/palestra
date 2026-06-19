@@ -65,7 +65,7 @@ function listFeedbackForSeduta(clienteId, sedutaId) {
   const db = getDb();
   return db.prepare(`
     SELECT fe.id, fe.esercizio_id, fe.cliente_id, fe.carico_effettivo, fe.reps_effettive,
-           fe.difficolta, fe.note, fe.aggiornato_il
+           fe.difficolta, fe.note, fe.stato, fe.aggiornato_il
     FROM feedback_esercizi fe
     JOIN esercizi e ON e.id = fe.esercizio_id
     WHERE fe.cliente_id = ? AND e.seduta_id = ?
@@ -76,7 +76,7 @@ function listFeedbackForSeduta(clienteId, sedutaId) {
 function getFeedbackEsercizio(clienteId, esercizioId) {
   const db = getDb();
   return db.prepare(`
-    SELECT id, esercizio_id, cliente_id, carico_effettivo, reps_effettive, difficolta, note, aggiornato_il
+    SELECT id, esercizio_id, cliente_id, carico_effettivo, reps_effettive, difficolta, note, stato, aggiornato_il
     FROM feedback_esercizi
     WHERE cliente_id = ? AND esercizio_id = ?
   `).get(clienteId, esercizioId) || null;
@@ -93,13 +93,14 @@ function upsertFeedbackEsercizio(clienteId, esercizioId, data = {}) {
   }
   const db = getDb();
   db.prepare(`
-    INSERT INTO feedback_esercizi (esercizio_id, cliente_id, carico_effettivo, reps_effettive, difficolta, note, aggiornato_il)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO feedback_esercizi (esercizio_id, cliente_id, carico_effettivo, reps_effettive, difficolta, note, stato, aggiornato_il)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(esercizio_id, cliente_id) DO UPDATE SET
       carico_effettivo = excluded.carico_effettivo,
       reps_effettive = excluded.reps_effettive,
       difficolta = excluded.difficolta,
       note = excluded.note,
+      stato = COALESCE(excluded.stato, feedback_esercizi.stato),
       aggiornato_il = datetime('now')
   `).run(
     esercizioId,
@@ -108,6 +109,7 @@ function upsertFeedbackEsercizio(clienteId, esercizioId, data = {}) {
     data.reps_effettive ?? data.reps ?? null,
     data.difficolta === undefined || data.difficolta === '' ? null : parseInt(data.difficolta, 10),
     data.note ?? null,
+    data.stato ?? null,
   );
   return getFeedbackEsercizio(clienteId, esercizioId);
 }
