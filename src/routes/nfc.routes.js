@@ -406,7 +406,6 @@ router.get('/bacheca', (req, res) => {
 
   const rows = avvisi.map((a) => `
     <tr>
-      <td class="muted num">#${a.id}</td>
       <td class="muted">${fmtDateTimeFull(a.creato_il)}</td>
       <td>${tipoBadge(a.tipo)}</td>
       <td>${clienteCell(a)}</td>
@@ -414,7 +413,7 @@ router.get('/bacheca', (req, res) => {
       <td>${statoCell(a)}</td>
       <td class="col-right">${segnaForm(a)}</td>
     </tr>
-  `).join('') || `<tr><td colspan="7" class="muted">Nessun avviso. Quando arriva un check-in anomalo comparirà qui.</td></tr>`;
+  `).join('') || `<tr><td colspan="6" class="muted">Nessun avviso. Quando arriva un check-in anomalo comparirà qui.</td></tr>`;
 
   const cards = avvisi.map((a) => `
     <div class="row-card">
@@ -438,7 +437,7 @@ router.get('/bacheca', (req, res) => {
         <h1>Avvisi e bacheca</h1>
         <div class="toolbar">
           <form method="POST" action="/admin/bacheca/segna-tutti-letti" style="display:inline">
-            <button type="submit" class="btn">Segna tutti come letti</button>
+            <button type="submit" class="btn" onclick="return confirm('Segnare tutti gli avvisi come letti?')">Segna tutti come letti</button>
           </form>
         </div>
       </div>
