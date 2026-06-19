@@ -5,3 +5,11 @@ node_modules/
 *.log
 npm-debug.log*
 .DS_Store
+
+# Local runtime artifacts
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+.claude/settings.local.json
+.claude/worktrees/
+backups/
