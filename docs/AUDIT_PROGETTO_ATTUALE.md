@@ -379,4 +379,40 @@ I problemi principali non sono tanto di dominio, quanto di struttura:
 - routing e rendering mescolati;
 - UI admin da riordinare.
 
+## 16. Debiti tecnici post-STEP 3 (refactor)
+
+### D4 — SQL reset PROSSIMA duplicato tra `setStatoSeduta` e `preparaProssimaSeduta`
+
+**File coinvolti:**
+- `src/services/sedute.service.js` — `setStatoSeduta(id, 'PROSSIMA')` (righe 60-71)
+- `src/services/revisioni.service.js` — `preparaProssimaSeduta` (righe 168-186)
+
+**Descrizione:**
+I passi 2 e 3 dentro la transazione di `preparaProssimaSeduta` replicano la logica già presente in `setStatoSeduta` quando viene chiamata con stato `'PROSSIMA'`:
+- reset delle sedute `PROSSIMA` esistenti del cliente → `BOZZA` (`AND id != dest.id`);
+- promozione della seduta destinazione → `PROSSIMA`.
+
+**Perché è stata lasciata intenzionalmente:**
+- `preparaProssimaSeduta` è già dentro una transazione critica (`db.transaction`);
+- chiamare `setProssima(dest.id)` dall'interno innescherebbe una transazione annidata (SAVEPOINT better-sqlite3);
+- il comportamento è tecnicamente corretto ma introduce complessità implicita non documentata;
+- la soluzione più pulita richiede helper interni non-transazionali condivisi, non un semplice refactor di una riga;
+- il beneficio non giustifica il rischio nello STEP 3.
+
+**Soluzione futura:**
+Estrarre helper interni (non esportati) in `sedute.service.js`:
+```js
+// Privati — nessuna transazione propria, da chiamare dentro tx esterna
+function _resetProssimaPerCliente(db, clienteId, exceptSedutaId) { ... }
+function _setStatoSedutaRaw(db, sedutaId, stato) { ... }
+```
+Usarli sia da `setStatoSeduta` sia da `preparaProssimaSeduta`, ognuno dentro la propria transazione già esistente — zero SAVEPOINT annidate.
+
+**Prerequisiti prima di affrontarlo:**
+Test di integrazione completi su:
+- una sola seduta `PROSSIMA` per cliente dopo la promozione;
+- revisione coach invariata;
+- prepara prossima seduta: copia esercizi, vecchia PROSSIMA → BOZZA, nuova → PROSSIMA;
+- nessun movimento ingressi generato.
+
 La strategia corretta non è una riscrittura completa, ma un refactor incrementale con priorità a pulizia, centralizzazione e semplificazione dei flussi.
