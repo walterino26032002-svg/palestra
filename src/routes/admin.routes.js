@@ -23,6 +23,7 @@ const router = express.Router();
 const { adminLayout } = require('../views/adminLayout');
 const { escapeHtml, alertBlock, backWithMsg, fmtDateTime } = require('../utils/helpers');
 const { buildAdminCounts } = require('../utils/adminCounts');
+const { getDb } = require('../db/connection');
 
 function fmtEurFromCent(cent) {
   const n = Number(cent || 0) / 100;
@@ -41,7 +42,15 @@ router.get('/', (req, res) => {
   const daRevisionare = counts['/admin/revisioni'] || 0;
   const nonLetti = counts['/admin/bacheca'] || 0;
 
-  const niente = daRevisionare === 0 && nonLetti === 0;
+  let checkinOggi = [];
+  try {
+    checkinOggi = getDb().prepare(`
+      SELECT strftime('%H:%M', p.entrata_il, 'localtime') AS ora, c.nome, c.cognome
+      FROM presenze p JOIN clienti c ON c.id = p.cliente_id
+      WHERE p.data = date('now', 'localtime')
+      ORDER BY p.entrata_il DESC LIMIT 5
+    `).all();
+  } catch (_) {}
 
   const body = `
     <header class="page-head">
@@ -50,27 +59,33 @@ router.get('/', (req, res) => {
       <p class="muted">Ciao ${escapeHtml(req.admin.username)}</p>
     </header>
 
-    <section class="card" style="margin-bottom:24px" aria-label="Da fare">
-      <h2 class="section-title">Da fare</h2>
-      ${niente ? '<p class="muted">Tutto in ordine.</p>' : `
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <h2 class="section-title">Revisioni schede</h2>
         ${daRevisionare > 0
-          ? `<p style="margin-bottom:12px"><a class="btn btn-primary" href="/admin/revisioni">Revisioni in attesa &nbsp;<span class="badge badge-warn">${daRevisionare}</span></a></p>`
-          : '<p class="muted small">Nessuna revisione in attesa.</p>'}
-        ${nonLetti > 0
-          ? `<p><a class="btn" href="/admin/bacheca">Avvisi non letti &nbsp;<span class="badge badge-warn">${nonLetti}</span></a></p>`
-          : '<p class="muted small">Nessun avviso non letto. <a href="/admin/bacheca">Vedi storico avvisi →</a></p>'}
-      `}
-    </section>
-
-    <section aria-label="Azioni rapide">
-      <h2 class="section-title">Azioni rapide</h2>
-      <div class="toolbar" style="flex-wrap:wrap;gap:10px">
-        <a class="btn btn-primary" href="/admin/clienti/nuovo">+ Nuovo cliente</a>
-        <a class="btn" href="/admin/clienti">Clienti</a>
-        <a class="btn" href="/admin/schede">Allenamenti</a>
-        <a class="btn" href="/admin/nfc">NFC / Ingressi</a>
+          ? `<p>Hai <strong>${daRevisionare}</strong> ${daRevisionare === 1 ? 'scheda' : 'schede'} da revisionare.</p>
+             <a class="btn btn-primary" href="/admin/revisioni">Apri revisioni</a>`
+          : '<p class="muted">Nessuna scheda da revisionare.</p>'}
       </div>
-    </section>
+      <div class="card">
+        <h2 class="section-title">Avvisi</h2>
+        ${nonLetti > 0
+          ? `<p>Hai <strong>${nonLetti}</strong> ${nonLetti === 1 ? 'avviso' : 'avvisi'} non letti.</p>
+             <a class="btn" href="/admin/bacheca">Apri avvisi</a>`
+          : '<p class="muted">Nessun avviso non letto.</p><p style="margin-top:8px"><a class="muted small" href="/admin/bacheca">Vedi storico avvisi →</a></p>'}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">Oggi in palestra</h2>
+      ${checkinOggi.length === 0
+        ? '<p class="muted">Nessun check-in registrato oggi.</p>'
+        : `<p class="muted small" style="margin-bottom:10px">Check-in oggi: <strong>${checkinOggi.length}</strong></p>
+           <ul style="margin:0 0 14px;padding-left:18px;line-height:2">
+             ${checkinOggi.map(p => `<li><span class="muted small">${escapeHtml(p.ora)}</span> &nbsp;${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</li>`).join('')}
+           </ul>
+           <a class="muted small" href="/admin/nfc">Vai a NFC / Ingressi →</a>`}
+    </div>
   `;
   res.send(adminLayout({
     title: 'Bacheca operativa',
