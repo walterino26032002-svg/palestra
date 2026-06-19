@@ -81,39 +81,6 @@ app.get('/', (req, res) => {
   return res.redirect('/login');
 });
 
-// Pagine cliente (HTML statico, protette)
-app.get('/cliente', requireCliente, (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'cliente', 'index.html'));
-});
-
-// Espone l'utente loggato alle pagine HTML statiche via header iniettato runtime.
-// Inietta uno script che valorizza window.__USER__ (no template engine).
-app.use((req, res, next) => {
-  const originalSendFile = res.sendFile.bind(res);
-  res.sendFile = function (filePath, opts, cb) {
-    if (req.user && typeof filePath === 'string' && filePath.endsWith('.html')) {
-      // intercetta per aggiungere il payload utente prima del </head>
-      const fs = require('fs');
-      try {
-        let html = fs.readFileSync(filePath, 'utf8');
-        const injected = `<script>window.__USER__ = ${JSON.stringify(req.user).replace(/</g, '\\u003c')};</script>`;
-        if (html.includes('</head>')) {
-          html = html.replace('</head>', injected + '</head>');
-        } else {
-          html = injected + html;
-        }
-        res.type('html').send(html);
-        if (typeof cb === 'function') cb();
-        return res;
-      } catch (e) {
-        // fallback: file non leggibile, delega
-      }
-    }
-    return originalSendFile(filePath, opts, cb);
-  };
-  next();
-});
-
 // 404 JSON
 app.use((req, res) => {
   // Se è una richiesta "browser" per un path HTML non trovato, rimanda al login.
