@@ -130,7 +130,7 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
   const riepilogo = schedeService.riepilogoCliente(clienteId);
 
   const blocchiHtml = riepilogo.blocchi.length === 0
-    ? `<div class="card muted">Nessun blocco. Usa il form qui sopra per crearne uno.</div>`
+    ? `<div class="card muted">Nessun blocco. Usa il form qui sotto per crearne uno.</div>`
     : riepilogo.blocchi.map((b, i) => {
         const sedute = seduteService.listSeduteBlocco(b.id);
         const gruppi = {};
@@ -150,8 +150,8 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
                     ${statoBadgeImportante(s.stato)}
                   </div>
                   <div class="sc-ex">${s.esercizi_count || 0} esercizi</div>
-                  <div class="sc-meta">${escapeHtml(sett)}</div>
                   ${s.titolo ? `<div class="sc-meta">${escapeHtml(s.titolo)}</div>` : ''}
+                  <div class="sc-meta" style="font-size:0.72em;opacity:0.55">ID per copia: ${s.id}</div>
                 </a>
               `).join('')}
             </div>
@@ -176,7 +176,6 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
             <div class="workout-block-body">
               <div class="seduta-progress" style="margin-top:0">
                 <div class="track"><div class="fill" style="width:${pc}%"></div></div>
-                <span class="pc">${pc}%</span>
               </div>
               <div class="inset-grid">
                 <div class="inset"><div class="l">Sedute</div><div class="vv">${b.sedute_totali}</div></div>
@@ -190,14 +189,14 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
       }).join('');
 
   const prossimaBox = riepilogo.prossima_seduta
-    ? `<div class="alert alert-ok">Seduta PROSSIMA: <strong>#${riepilogo.prossima_seduta.id}</strong> — <a href="/admin/sedute/${riepilogo.prossima_seduta.id}">apri editor</a></div>`
+    ? `<div class="alert alert-ok">Seduta pronta: <a href="/admin/sedute/${riepilogo.prossima_seduta.id}">Sett. ${riepilogo.prossima_seduta.indice_settimana} · Sed. ${riepilogo.prossima_seduta.indice_seduta} — apri editor</a></div>`
     : `<div class="alert alert-error">Nessuna seduta PROSSIMA. Il cliente NON vedrà l'allenamento al check-in finché non ne imposti una.</div>`;
 
   const body = `
     <div class="row-between">
       <div class="page-head" style="margin:0">
         <span class="eyebrow">Scheda allenamento</span>
-        <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} <span class="muted small">#${cliente.id}</span></h1>
+        <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</h1>
       </div>
       <div class="toolbar">
         <a class="btn" href="/admin/clienti/${cliente.id}">← Dettaglio cliente</a>
@@ -207,7 +206,26 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
     ${prossimaBox}
 
-    <h2 style="margin-top:8px">Crea blocco</h2>
+    <h2 style="margin-top:8px">Blocchi</h2>
+    ${blocchiHtml}
+
+    ${riepilogo.blocchi.length > 0 ? `
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Crea nuovo blocco</summary>
+      <form method="POST" action="/admin/clienti/${cliente.id}/blocchi" class="card create-block" style="margin-top:10px">
+        <div class="cb-grid">
+          <label class="field">Nome blocco <input name="nome" placeholder="es. Blocco Forza 1" required></label>
+          <label class="field">Data inizio <input name="data_inizio" type="date" value="${new Date().toISOString().slice(0,10)}"></label>
+          <label class="field">Settimane <input name="settimane" type="number" min="1" value="4" required></label>
+          <label class="field">Sedute a settimana <input name="sedute_per_settimana" type="number" min="1" value="5" required></label>
+        </div>
+        <div class="cb-foot">
+          <p class="hint">Verranno create automaticamente le sedute in bozza per ogni settimana.</p>
+          <button type="submit" class="btn btn-primary">Crea blocco</button>
+        </div>
+      </form>
+    </details>` : `
+    <h2 style="margin-top:24px">Crea blocco</h2>
     <form method="POST" action="/admin/clienti/${cliente.id}/blocchi" class="card create-block">
       <div class="cb-grid">
         <label class="field">Nome blocco <input name="nome" placeholder="es. Blocco Forza 1" required></label>
@@ -219,10 +237,7 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
         <p class="hint">Verranno create automaticamente le sedute in bozza per ogni settimana.</p>
         <button type="submit" class="btn btn-primary">Crea blocco</button>
       </div>
-    </form>
-
-    <h2 style="margin-top:24px">Blocchi</h2>
-    ${blocchiHtml}
+    </form>`}
   `;
 
   res.send(adminLayout({
