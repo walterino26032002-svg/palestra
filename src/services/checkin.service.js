@@ -21,6 +21,7 @@ const { getDb } = require('../db/connection');
 const nfc = require('./nfc.service');
 const movimenti = require('./movimenti.service');
 const bacheca = require('./bacheca.service');
+const seduteService = require('./sedute.service');
 
 function todayISO() {
   // 'YYYY-MM-DD' locale
@@ -30,14 +31,7 @@ function todayISO() {
 }
 
 function findProssimaSeduta(clienteId) {
-  const db = getDb();
-  return db.prepare(`
-    SELECT id, blocco_id, indice_settimana, indice_seduta, titolo
-    FROM sedute
-    WHERE cliente_id = ? AND stato = 'PROSSIMA'
-    ORDER BY id DESC
-    LIMIT 1
-  `).get(clienteId) || null;
+  return seduteService.getProssimaSedutaCliente(clienteId);
 }
 
 function findPresenzaOggi(clienteId) {
