@@ -58,18 +58,17 @@ router.get('/nfc', (req, res) => {
       ? `<a href="/admin/clienti/${t.cliente_id}">${escapeHtml(t.cliente_cognome)} ${escapeHtml(t.cliente_nome)}</a>${t.cliente_attivo ? '' : ' <span class="badge badge-danger">non attivo</span>'}`
       : '<span class="muted">—</span>';
     return `<tr>
-      <td class="muted num">#${t.id}</td>
       <td><code>${escapeHtml(t.tessera_uid)}</code></td>
       <td>${cliente}</td>
       <td>${statoBadgeT(t)}</td>
       <td class="hide-mobile">${fmtDateShort(t.assegnata_il)}</td>
       <td class="col-right">
         <form method="POST" action="/admin/nfc/${t.id}/toggle-attiva" style="display:inline">
-          <button type="submit" class="btn btn-ghost small">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
+          <button type="submit" class="btn btn-ghost small" onclick="return confirm('${t.attiva ? 'Disattivare questa tessera? Il cliente non potrà fare check-in.' : 'Riattivare questa tessera?'}')">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
         </form>
       </td>
     </tr>`;
-  }).join('') || `<tr><td colspan="6" class="muted">Nessuna tessera.</td></tr>`;
+  }).join('') || `<tr><td colspan="5" class="muted">Nessuna tessera.</td></tr>`;
 
   const cards = tessere.map((t) => {
     const cliente = t.cliente_id
@@ -86,7 +85,7 @@ router.get('/nfc', (req, res) => {
       </div>
       <div class="rc-act">
         <form method="POST" action="/admin/nfc/${t.id}/toggle-attiva" style="display:inline">
-          <button type="submit" class="btn btn-ghost small">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
+          <button type="submit" class="btn btn-ghost small" onclick="return confirm('${t.attiva ? 'Disattivare questa tessera? Il cliente non potrà fare check-in.' : 'Riattivare questa tessera?'}')">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
         </form>
       </div>
     </div>`;
@@ -98,7 +97,7 @@ router.get('/nfc', (req, res) => {
       <div class="row-between" style="margin-bottom:0">
         <h1>Tessere NFC</h1>
         <div class="toolbar">
-          <a class="btn" href="/admin/nfc/simulatore">Simulatore</a>
+          <a class="btn" href="/admin/nfc/simulatore">Segna ingresso</a>
           <a class="btn btn-primary" href="/admin/nfc/nuova">+ Nuova tessera</a>
         </div>
       </div>
@@ -114,12 +113,12 @@ router.get('/nfc', (req, res) => {
     </section>
 
     <form method="GET" action="/admin/nfc" class="filter-bar">
-      <input type="text" name="q" placeholder="Cerca per UID, cognome, nome" value="${escapeHtml(q)}">
+      <input type="text" name="q" placeholder="Cerca tessera o cliente" value="${escapeHtml(q)}">
       <button type="submit" class="btn">Cerca</button>
     </form>
     <div class="table-wrap hide-mobile">
       <table class="table">
-        <thead><tr><th>ID</th><th>UID</th><th>Cliente</th><th>Stato</th><th>Assegnata</th><th class="col-right">Azioni</th></tr></thead>
+        <thead><tr><th>UID</th><th>Cliente</th><th>Stato</th><th>Assegnata</th><th class="col-right">Azioni</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -205,14 +204,14 @@ router.post('/nfc/:id(\\d+)/toggle-attiva', (req, res) => {
 router.get('/nfc/simulatore', (req, res) => {
   const tessere = nfcService.listTessere();
   const tessereOptions = tessere.map((t) =>
-    `<option value="${escapeHtml(t.tessera_uid)}">${escapeHtml(t.tessera_uid)} — ${escapeHtml(t.cliente_cognome || '?')} ${escapeHtml(t.cliente_nome || '')}</option>`
+    `<option value="${escapeHtml(t.tessera_uid)}">${escapeHtml(t.cliente_cognome || '?')} ${escapeHtml(t.cliente_nome || '')} — ${escapeHtml(t.tessera_uid)}</option>`
   ).join('');
 
   const body = `
     <header class="page-head">
       <p class="eyebrow">Operatività</p>
-      <h1>Simulatore NFC</h1>
-      <p class="muted">Simula una lettura come se provenisse dal lettore: inserisci un UID o scegli una tessera esistente.</p>
+      <h1>Segna ingresso</h1>
+      <p class="muted">Usa questa pagina per registrare manualmente un ingresso tramite tessera NFC già associata.</p>
     </header>
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
@@ -229,10 +228,10 @@ router.get('/nfc/simulatore', (req, res) => {
           </select>
         </label>
         <label>Sorgente (per logging)
-          <input id="sorgente" value="simulatore">
+          <input id="sorgente" type="hidden" name="sorgente" value="simulatore">
         </label>
         <div class="toolbar">
-          <button type="button" class="btn btn-primary" id="btnCheck">Simula check-in</button>
+          <button type="button" class="btn btn-primary" id="btnCheck">Segna ingresso</button>
           <a class="btn" href="/admin/bacheca">Vai alla bacheca</a>
         </div>
       </div>
@@ -362,13 +361,13 @@ router.get('/nfc/simulatore', (req, res) => {
     </script>
   `;
   res.send(adminLayout({
-    title: 'Simulatore NFC',
+    title: 'Segna ingresso',
     user: req.admin,
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
-      { label: 'NFC', href: '/admin/nfc' },
-      { label: 'Simulatore' },
+      { label: 'Bacheca', href: '/admin' },
+      { label: 'NFC / Ingressi', href: '/admin/nfc' },
+      { label: 'Segna ingresso' },
     ],
   }));
 });
