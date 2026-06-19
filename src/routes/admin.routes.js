@@ -118,7 +118,6 @@ router.get('/clienti', (req, res) => {
 
   const rows = clienti.map((c) => `
     <tr>
-      <td class="muted num">#${c.id}</td>
       <td><a href="/admin/clienti/${c.id}"><strong>${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</strong></a></td>
       <td class="muted">${escapeHtml(c.email || '—')}</td>
       <td class="muted">${escapeHtml(c.telefono || '—')}</td>
@@ -126,12 +125,12 @@ router.get('/clienti', (req, res) => {
       <td><span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span></td>
       <td>${statoCliente(c)}</td>
     </tr>
-  `).join('') || `<tr><td colspan="7" class="muted">Nessun cliente trovato. Aggiungine uno con "Nuovo cliente".</td></tr>`;
+  `).join('') || `<tr><td colspan="6" class="muted">Nessun cliente trovato. Aggiungine uno con "Nuovo cliente".</td></tr>`;
 
   const cards = clienti.map((c) => `
     <a class="row-card" href="/admin/clienti/${c.id}" style="display:block">
       <div class="rc-top">
-        <span class="t">${escapeHtml(c.cognome)} ${escapeHtml(c.nome)} <span class="muted small">#${c.id}</span></span>
+        <span class="t">${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</span>
         ${statoCliente(c)}
       </div>
       <div class="rc-meta">
@@ -169,7 +168,7 @@ router.get('/clienti', (req, res) => {
     <div class="table-wrap hide-mobile">
       <table class="table">
         <thead><tr>
-          <th>ID</th><th>Nome</th><th>Email</th><th>Telefono</th>
+          <th>Nome</th><th>Email</th><th>Telefono</th>
           <th class="col-right">Saldo</th><th>Badge</th><th>Stato</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -183,7 +182,7 @@ router.get('/clienti', (req, res) => {
     active: '/admin/clienti',
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Clienti' },
     ],
   }));
@@ -239,24 +238,21 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
 
   const pagRows = pagamenti.map((p) => `
     <tr>
-      <td class="muted num">#${p.id}</td>
       <td class="muted">${fmtDateTime(p.pagato_il)}</td>
       <td>${escapeHtml(p.servizio_nome || '—')}</td>
       <td class="col-right num">${p.servizio_ingressi ?? '—'}</td>
       <td class="col-right num">${fmtEurFromCent(p.importo_cent)}</td>
       <td>${escapeHtml(p.metodo || '—')}</td>
     </tr>
-  `).join('') || `<tr><td colspan="6" class="muted">Nessun pagamento registrato.</td></tr>`;
+  `).join('') || `<tr><td colspan="5" class="muted">Nessun pagamento registrato.</td></tr>`;
 
   const movRows = movimenti.map((m) => `
     <tr>
-      <td class="muted num">#${m.id}</td>
       <td class="muted">${fmtDateTime(m.creato_il)}</td>
       <td class="col-right num"${m.delta < 0 ? ' style="color:var(--danger)"' : ''}>${m.delta > 0 ? '+' : ''}${m.delta}</td>
       <td>${escapeHtml(m.motivo)}</td>
-      <td class="col-right num">${m.riferimento_id ?? '—'}</td>
     </tr>
-  `).join('') || `<tr><td colspan="5" class="muted">Nessun movimento ingressi.</td></tr>`;
+  `).join('') || `<tr><td colspan="3" class="muted">Nessun movimento ingressi.</td></tr>`;
 
   const serviziOptions = servizi.map((s) =>
     `<option value="${s.id}">${escapeHtml(s.nome)} — ${s.ingressi} ingr. (${fmtEurFromCent(s.prezzo_cent)})</option>`
@@ -268,7 +264,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
 
   const body = `
     <header class="page-head">
-      <p class="eyebrow">Cliente #${cliente.id}</p>
+      <p class="eyebrow">Profilo cliente</p>
       <div class="row-between" style="margin-bottom:0">
         <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} ${statoBadge}</h1>
         <div class="toolbar">
@@ -279,12 +275,12 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
 
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
-    <div class="toolbar" style="margin-bottom:18px">
-      <a class="btn" href="/admin/clienti/${cliente.id}/scheda/pdf">PDF scheda</a>
-      <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
-      <a class="btn" href="/admin/clienti/${cliente.id}/report/pdf">PDF report</a>
-      <a class="btn" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report</a>
-    </div>
+    ${!schedaRiepilogo.prossima_seduta ? `
+    <div class="card" style="border-color:var(--warn);margin-bottom:16px;padding:12px 16px">
+      <span class="badge badge-warn">Nessuna seduta PROSSIMA</span>
+      <span class="muted small" style="margin-left:10px">Il cliente non vedrà allenamento al check-in finché non ne imposti una.</span>
+      <a class="btn small" href="/admin/clienti/${cliente.id}/scheda" style="margin-left:12px">Apri scheda →</a>
+    </div>` : ''}
 
     <section class="svc-stats">
       <div class="svc-stat">
@@ -303,7 +299,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       </div>
     </section>
 
-    <section class="grid grid-2">
+    <section class="grid grid-2" style="align-items:start">
       <div class="card">
         <h2>Anagrafica</h2>
         <form method="POST" action="/admin/clienti/${cliente.id}" class="form-stacked">
@@ -322,30 +318,30 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
             <button type="submit" class="btn btn-primary">Salva anagrafica</button>
           </div>
         </form>
-        <form method="POST" action="/admin/clienti/${cliente.id}/toggle-attivo" style="margin-top:12px">
-          <button type="submit" class="btn">${cliente.attivo ? 'Disattiva cliente' : 'Attiva cliente'}</button>
-        </form>
       </div>
 
-      <div class="card">
-        <h2>Scheda allenamento</h2>
-        ${schedaRiepilogo.ha_scheda
-          ? `<p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count}</strong> (${schedaRiepilogo.blocchi_archiviati} archiviati)
-                 · Sedute: <strong>${schedaRiepilogo.sedute_totali}</strong>
-                 (${schedaRiepilogo.sedute_completate} completate)</p>
-             ${schedaRiepilogo.prossima_seduta
-               ? `<p>Seduta PROSSIMA: <a href="/admin/sedute/${schedaRiepilogo.prossima_seduta.id}">#${schedaRiepilogo.prossima_seduta.id} — Settimana ${schedaRiepilogo.prossima_seduta.indice_settimana} · Seduta ${schedaRiepilogo.prossima_seduta.indice_seduta}</a></p>`
-               : `<p><span class="badge badge-warn">Nessuna seduta PROSSIMA</span></p><p class="muted small">Il cliente non vedrà allenamento al check-in finché non ne imposti una.</p>`}
-             <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Apri scheda completa</a>`
-          : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
-             <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco 4×5</a>`}
-
-        <h2 style="margin-top:24px">Password cliente</h2>
-        <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
-          <label>Nuova password <input name="password" type="text" required></label>
-          <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
-        </form>
-        <p class="muted small">Verrà salvata come hash bcrypt.</p>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <h2>Scheda allenamento</h2>
+          ${schedaRiepilogo.ha_scheda
+            ? `<p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count}</strong> (${schedaRiepilogo.blocchi_archiviati} archiviati)
+                   · Sedute: <strong>${schedaRiepilogo.sedute_totali}</strong>
+                   (${schedaRiepilogo.sedute_completate} completate)</p>
+               ${schedaRiepilogo.prossima_seduta
+                 ? `<p>Seduta PROSSIMA: <a href="/admin/sedute/${schedaRiepilogo.prossima_seduta.id}">Settimana ${schedaRiepilogo.prossima_seduta.indice_settimana} · Seduta ${schedaRiepilogo.prossima_seduta.indice_seduta}</a></p>`
+                 : ''}
+               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Apri scheda completa</a>`
+            : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
+               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco 4×5</a>`}
+        </div>
+        <div class="card">
+          <h2>Password accesso cliente</h2>
+          <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
+            <label>Nuova password <input name="password" type="password" required></label>
+            <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
+          </form>
+          <p class="muted small">Verrà salvata come hash bcrypt.</p>
+        </div>
       </div>
     </section>
 
@@ -365,25 +361,35 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       </form>
     </section>
 
-    <section class="section-gap">
-      <h2>Pagamenti</h2>
-      <div class="table-wrap">
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Storico pagamenti</summary>
+      <div class="table-wrap" style="margin-top:10px">
         <table class="table">
-          <thead><tr><th>ID</th><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th></tr></thead>
+          <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th></tr></thead>
           <tbody>${pagRows}</tbody>
         </table>
       </div>
-    </section>
+    </details>
 
-    <section class="section-gap">
-      <h2>Movimenti ingressi</h2>
-      <div class="table-wrap">
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Movimenti ingressi</summary>
+      <div class="table-wrap" style="margin-top:10px">
         <table class="table">
-          <thead><tr><th>ID</th><th>Data</th><th class="col-right">Δ</th><th>Motivo</th><th class="col-right">Rif.</th></tr></thead>
+          <thead><tr><th>Data</th><th class="col-right">Δ</th><th>Motivo</th></tr></thead>
           <tbody>${movRows}</tbody>
         </table>
       </div>
-    </section>
+    </details>
+
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Export cliente</summary>
+      <div class="toolbar" style="margin-top:10px">
+        <a class="btn" href="/admin/clienti/${cliente.id}/scheda/pdf">PDF scheda</a>
+        <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
+        <a class="btn" href="/admin/clienti/${cliente.id}/report/pdf">PDF report</a>
+        <a class="btn" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report</a>
+      </div>
+    </details>
   `;
 
   res.send(adminLayout({
