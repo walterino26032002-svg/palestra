@@ -6,6 +6,10 @@ const seduteService = require('./sedute.service');
 const eserciziService = require('./esercizi.service');
 const clientiService = require('./clienti.service');
 const movimentiService = require('./movimenti.service');
+const {
+  listFeedbackEserciziSeduta: listFeedbackForSeduta,
+  getFeedbackSeduta,
+} = require('./feedback.service');
 
 function todayISO() {
   return checkinService.todayISO();
@@ -61,18 +65,6 @@ function getAllenamento(clienteId) {
   };
 }
 
-function listFeedbackForSeduta(clienteId, sedutaId) {
-  const db = getDb();
-  return db.prepare(`
-    SELECT fe.id, fe.esercizio_id, fe.cliente_id, fe.carico_effettivo, fe.reps_effettive,
-           fe.difficolta, fe.note, fe.stato, fe.aggiornato_il
-    FROM feedback_esercizi fe
-    JOIN esercizi e ON e.id = fe.esercizio_id
-    WHERE fe.cliente_id = ? AND e.seduta_id = ?
-    ORDER BY e.ordine ASC, e.id ASC
-  `).all(clienteId, sedutaId);
-}
-
 function getFeedbackEsercizio(clienteId, esercizioId) {
   const db = getDb();
   return db.prepare(`
@@ -112,15 +104,6 @@ function upsertFeedbackEsercizio(clienteId, esercizioId, data = {}) {
     data.stato ?? null,
   );
   return getFeedbackEsercizio(clienteId, esercizioId);
-}
-
-function getFeedbackSeduta(clienteId, sedutaId) {
-  const db = getDb();
-  return db.prepare(`
-    SELECT id, seduta_id, cliente_id, commento, voto, inviato_il, revisionato_il, note_coach
-    FROM feedback_seduta
-    WHERE cliente_id = ? AND seduta_id = ?
-  `).get(clienteId, sedutaId) || null;
 }
 
 function upsertFeedbackSeduta(clienteId, sedutaId, data = {}) {

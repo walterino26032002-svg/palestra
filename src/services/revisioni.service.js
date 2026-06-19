@@ -20,6 +20,7 @@
 const { getDb } = require('../db/connection');
 const seduteService = require('./sedute.service');
 const eserciziService = require('./esercizi.service');
+const { listFeedbackEserciziSeduta, getFeedbackSeduta } = require('./feedback.service');
 
 /** Elenco sedute COMPLETATE. Di default solo quelle non ancora revisionate. */
 function listDaRevisionare({ includeRevisionate = false, limit = 200 } = {}) {
@@ -98,20 +99,9 @@ function getDettaglioRevisione(sedutaId) {
 
   const esercizi = eserciziService.listEserciziSeduta(sedutaId);
 
-  const feedbackEsercizi = db.prepare(`
-    SELECT fe.id, fe.esercizio_id, fe.carico_effettivo, fe.reps_effettive,
-           fe.difficolta, fe.note, fe.aggiornato_il
-    FROM feedback_esercizi fe
-    JOIN esercizi e ON e.id = fe.esercizio_id
-    WHERE fe.cliente_id = ? AND e.seduta_id = ?
-    ORDER BY e.ordine ASC, e.id ASC
-  `).all(seduta.cliente_id, sedutaId);
+  const feedbackEsercizi = listFeedbackEserciziSeduta(seduta.cliente_id, sedutaId);
 
-  const feedbackSeduta = db.prepare(`
-    SELECT id, seduta_id, cliente_id, commento, voto, inviato_il, revisionato_il, note_coach
-    FROM feedback_seduta
-    WHERE cliente_id = ? AND seduta_id = ?
-  `).get(seduta.cliente_id, sedutaId) || null;
+  const feedbackSeduta = getFeedbackSeduta(seduta.cliente_id, sedutaId);
 
   const puoPreparareProssima = !!findProssimoSlotBozza(seduta);
 
