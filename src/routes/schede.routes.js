@@ -67,30 +67,29 @@ router.get('/schede', (req, res) => {
 
   const rows = data.map(({ c, r }) => {
     const prossima = r.prossima_seduta
-      ? `<a href="/admin/sedute/${r.prossima_seduta.id}">#${r.prossima_seduta.id}</a>`
+      ? `<a href="/admin/sedute/${r.prossima_seduta.id}">Sett. ${r.prossima_seduta.indice_settimana} · Sed. ${r.prossima_seduta.indice_seduta}</a>`
       : '<span class="muted">—</span>';
     const scheda = r.ha_scheda
       ? `<span class="num">${r.blocchi_count}</span> blocchi · <span class="num">${r.sedute_totali}</span> sedute`
       : '<span class="badge badge-warn">Senza scheda</span>';
     return `<tr>
-      <td class="muted">#${c.id}</td>
       <td>${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</td>
       <td>${scheda}</td>
       <td>${prossima}</td>
       <td class="col-right"><a class="btn" href="/admin/clienti/${c.id}/scheda">Apri scheda</a></td>
     </tr>`;
-  }).join('') || `<tr><td colspan="5" class="muted">Nessun cliente.</td></tr>`;
+  }).join('') || `<tr><td colspan="4" class="muted">Nessun cliente.</td></tr>`;
 
   const cards = data.map(({ c, r }) => {
     const prossima = r.prossima_seduta
-      ? `<b><a href="/admin/sedute/${r.prossima_seduta.id}">#${r.prossima_seduta.id}</a></b>`
+      ? `<a href="/admin/sedute/${r.prossima_seduta.id}">Sett. ${r.prossima_seduta.indice_settimana} · Sed. ${r.prossima_seduta.indice_seduta}</a>`
       : '<span class="muted">—</span>';
     const scheda = r.ha_scheda
       ? `${r.blocchi_count} blocchi · ${r.sedute_totali} sedute`
       : '<span class="badge badge-warn">Senza scheda</span>';
     return `<div class="row-card">
-      <div class="rc-top"><div class="t">${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</div><span class="muted small">#${c.id}</span></div>
-      <div class="rc-meta"><span>${scheda}</span><span>PROSSIMA: ${prossima}</span></div>
+      <div class="rc-top"><div class="t">${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</div></div>
+      <div class="rc-meta"><span>${scheda}</span><span>Seduta pronta: ${prossima}</span></div>
       <div class="rc-act"><a class="btn" href="/admin/clienti/${c.id}/scheda">Apri scheda</a></div>
     </div>`;
   }).join('') || `<div class="card muted">Nessun cliente.</div>`;
@@ -107,7 +106,7 @@ router.get('/schede', (req, res) => {
       <button type="submit" class="btn">Cerca</button>
     </form>
     <table class="table">
-      <thead><tr><th>ID</th><th>Cliente</th><th>Scheda</th><th>PROSSIMA</th><th class="col-right">Azioni</th></tr></thead>
+      <thead><tr><th>Cliente</th><th>Scheda</th><th>Seduta pronta</th><th class="col-right">Azioni</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="card-list">${cards}</div>
@@ -116,7 +115,7 @@ router.get('/schede', (req, res) => {
     title: 'Schede',
     user: req.admin,
     body,
-    breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Schede' }],
+    breadcrumb: [{ label: 'Bacheca', href: '/admin' }, { label: 'Schede' }],
   }));
 });
 
@@ -231,7 +230,7 @@ router.get('/clienti/:id(\\d+)/scheda', (req, res) => {
     user: req.admin,
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Clienti', href: '/admin/clienti' },
       { label: `${cliente.cognome} ${cliente.nome}`, href: `/admin/clienti/${cliente.id}` },
       { label: 'Scheda' },
@@ -464,7 +463,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
     user: req.admin,
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Clienti', href: '/admin/clienti' },
       { label: `${cliente.cognome} ${cliente.nome}`, href: `/admin/clienti/${cliente.id}` },
       { label: 'Scheda', href: `/admin/clienti/${cliente.id}/scheda` },
@@ -652,7 +651,7 @@ router.get('/revisioni', (req, res) => {
     title: 'Revisioni',
     user: req.admin,
     body,
-    breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Revisioni' }],
+    breadcrumb: [{ label: 'Bacheca', href: '/admin' }, { label: 'Revisioni' }],
   }));
 });
 
@@ -746,7 +745,7 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
     user: req.admin,
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Revisioni', href: '/admin/revisioni' },
       { label: `Seduta #${seduta.id}` },
     ],
