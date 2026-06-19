@@ -41,69 +41,35 @@ router.get('/', (req, res) => {
   const daRevisionare = counts['/admin/revisioni'] || 0;
   const nonLetti = counts['/admin/bacheca'] || 0;
 
-  let clientiAttivi = 0;
-  let clientiTot = 0;
-  try {
-    clientiTot = clientiService.listClienti({}).length;
-    clientiAttivi = clientiService.listClienti({ soloAttivi: true }).length;
-  } catch (_) {}
-
-  const revisioniBadge = daRevisionare > 0
-    ? ` <span class="badge badge-warn">${daRevisionare}</span>` : '';
-  const avvisiBadge = nonLetti > 0
-    ? ` <span class="badge badge-warn">${nonLetti}</span>` : '';
+  const niente = daRevisionare === 0 && nonLetti === 0;
 
   const body = `
     <header class="page-head">
       <p class="eyebrow">Accademia · Élite Training Club</p>
-      <h1>Bacheca operativa</h1>
-      <p class="muted">Ciao ${escapeHtml(req.admin.username)}, ecco il centro di controllo dell'Accademia.</p>
+      <h1>Bacheca</h1>
+      <p class="muted">Ciao ${escapeHtml(req.admin.username)}</p>
     </header>
 
-    <section class="kpi" aria-label="Riepilogo">
-      <div class="k"><p class="eyebrow">Clienti attivi</p><div class="v">${clientiAttivi}</div></div>
-      <div class="k"><p class="eyebrow">Clienti totali</p><div class="v">${clientiTot}</div></div>
-      <div class="k"><p class="eyebrow">Da revisionare</p><div class="v">${daRevisionare}</div></div>
-      <div class="k"><p class="eyebrow">Avvisi non letti</p><div class="v">${nonLetti}</div></div>
+    <section class="card" style="margin-bottom:24px" aria-label="Da fare">
+      <h2 class="section-title">Da fare</h2>
+      ${niente ? '<p class="muted">Tutto in ordine.</p>' : `
+        ${daRevisionare > 0
+          ? `<p style="margin-bottom:12px"><a class="btn btn-primary" href="/admin/revisioni">Revisioni in attesa &nbsp;<span class="badge badge-warn">${daRevisionare}</span></a></p>`
+          : '<p class="muted small">Nessuna revisione in attesa.</p>'}
+        ${nonLetti > 0
+          ? `<p><a class="btn" href="/admin/bacheca">Avvisi non letti &nbsp;<span class="badge badge-warn">${nonLetti}</span></a></p>`
+          : '<p class="muted small">Nessun avviso non letto. <a href="/admin/bacheca">Vedi storico avvisi →</a></p>'}
+      `}
     </section>
 
-    <section class="grid grid-3 section-gap">
-      <a class="card card-link" href="/admin/clienti">
-        <h3>Clienti <span class="arr">→</span></h3>
-        <p>Anagrafica, stato, saldo ingressi e pagamenti.</p>
-      </a>
-      <a class="card card-link" href="/admin/servizi">
-        <h3>Servizi <span class="arr">→</span></h3>
-        <p>Pacchetti ingressi e listino prezzi.</p>
-      </a>
-      <a class="card card-link" href="/admin/schede">
-        <h3>Schede <span class="arr">→</span></h3>
-        <p>Programmi di allenamento: blocchi, sedute ed esercizi.</p>
-      </a>
-      <a class="card card-link" href="/admin/revisioni">
-        <h3>Revisioni${revisioniBadge} <span class="arr">→</span></h3>
-        <p>Allenamenti completati dai clienti, da rivedere.</p>
-      </a>
-      <a class="card card-link" href="/admin/nfc">
-        <h3>Tessere <span class="arr">→</span></h3>
-        <p>Assegna e gestisci le tessere NFC dei clienti.</p>
-      </a>
-      <a class="card card-link" href="/admin/nfc/simulatore">
-        <h3>Prova check-in <span class="arr">→</span></h3>
-        <p>Simula la lettura di una tessera dal browser.</p>
-      </a>
-      <a class="card card-link" href="/admin/bacheca">
-        <h3>Avvisi${avvisiBadge} <span class="arr">→</span></h3>
-        <p>Eventi recenti e segnalazioni da gestire.</p>
-      </a>
-      <a class="card card-link" href="/admin/export">
-        <h3>Export e stampe <span class="arr">→</span></h3>
-        <p>Genera PDF e XLSX; la stampa avviene dal PDF.</p>
-      </a>
-      <a class="card card-link" href="/admin/backup">
-        <h3>Backup <span class="arr">→</span></h3>
-        <p>Copie di sicurezza del database, manuali e automatiche.</p>
-      </a>
+    <section aria-label="Azioni rapide">
+      <h2 class="section-title">Azioni rapide</h2>
+      <div class="toolbar" style="flex-wrap:wrap;gap:10px">
+        <a class="btn btn-primary" href="/admin/clienti/nuovo">+ Nuovo cliente</a>
+        <a class="btn" href="/admin/clienti">Clienti</a>
+        <a class="btn" href="/admin/schede">Allenamenti</a>
+        <a class="btn" href="/admin/nfc">NFC / Ingressi</a>
+      </div>
     </section>
   `;
   res.send(adminLayout({
