@@ -20,20 +20,7 @@ const router = express.Router();
 const apiRouter = express.Router();
 
 const { escapeHtml, alertBlock, backWithMsg, fmtDateShort, fmtDateTimeFull } = require('../utils/helpers');
-
-// Contatori per i badge della navbar (revisioni da fare + avvisi non letti)
-function buildCounts() {
-  const counts = {};
-  try {
-    const r = require('../services/revisioni.service').countDaRevisionare();
-    if (r > 0) counts['/admin/revisioni'] = r;
-  } catch (_) {}
-  try {
-    const n = bachecaService.countNonLetti();
-    if (n > 0) counts['/admin/bacheca'] = n;
-  } catch (_) {}
-  return counts;
-}
+const { buildAdminCounts } = require('../utils/adminCounts');
 
 // =====================================================================
 // POST /api/nfc/check  (pubblico: usabile da lettore o da simulatore)
@@ -478,7 +465,7 @@ router.get('/bacheca', (req, res) => {
     title: 'Avvisi e bacheca',
     user: req.admin,
     active: '/admin/bacheca',
-    counts: buildCounts(),
+    counts: buildAdminCounts(),
     body,
     breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Avvisi' }],
   }));

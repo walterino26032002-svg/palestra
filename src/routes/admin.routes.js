@@ -22,6 +22,7 @@ const router = express.Router();
 
 const { adminLayout } = require('../views/adminLayout');
 const { escapeHtml, alertBlock, backWithMsg, fmtDateTime } = require('../utils/helpers');
+const { buildAdminCounts } = require('../utils/adminCounts');
 
 function fmtEurFromCent(cent) {
   const n = Number(cent || 0) / 100;
@@ -36,11 +37,9 @@ function fmtEurFromCent(cent) {
 // DASHBOARD
 // -------------------------------------------------------------
 router.get('/', (req, res) => {
-  let nonLetti = 0;
-  try { nonLetti = require('../services/bacheca.service').countNonLetti() || 0; } catch (_) {}
-
-  let daRevisionare = 0;
-  try { daRevisionare = require('../services/revisioni.service').countDaRevisionare() || 0; } catch (_) {}
+  const counts = buildAdminCounts();
+  const daRevisionare = counts['/admin/revisioni'] || 0;
+  const nonLetti = counts['/admin/bacheca'] || 0;
 
   let clientiAttivi = 0;
   let clientiTot = 0;
@@ -48,10 +47,6 @@ router.get('/', (req, res) => {
     clientiTot = clientiService.listClienti({}).length;
     clientiAttivi = clientiService.listClienti({ soloAttivi: true }).length;
   } catch (_) {}
-
-  const counts = {};
-  if (daRevisionare > 0) counts['/admin/revisioni'] = daRevisionare;
-  if (nonLetti > 0) counts['/admin/bacheca'] = nonLetti;
 
   const revisioniBadge = daRevisionare > 0
     ? ` <span class="badge badge-warn">${daRevisionare}</span>` : '';
