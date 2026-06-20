@@ -72,7 +72,7 @@ router.get('/export', (req, res) => {
         <a class="export-tile" href="/admin/export/movimenti.xlsx">
           <span class="export-fmt">XLSX</span>
           <span class="export-name">Movimenti</span>
-          <span class="muted small">Ledger ingressi (saldo derivato)</span>
+          <span class="muted small">Storico ingressi e uscite</span>
           <span class="export-cta">Scarica →</span>
         </a>
       </div>
@@ -82,17 +82,12 @@ router.get('/export', (req, res) => {
       <h2>Export per cliente</h2>
       <p class="muted small" style="margin-top:4px">Apri il <a href="/admin/clienti">dettaglio di un cliente</a> per i bottoni PDF/XLSX di scheda e report. Dall'editor o dalla revisione di una seduta è disponibile il PDF della seduta.</p>
     </section>
-
-    <section class="card section-gap">
-      <h2>Stampa manuale</h2>
-      <p class="muted small" style="margin-top:4px">La stampa è sempre manuale: scarica o apri il PDF e usa la funzione di stampa del browser (Ctrl+P). Il sistema non stampa nulla automaticamente.</p>
-    </section>
   `;
   res.send(adminLayout({
     title: 'Export',
     user: req.admin,
     body,
-    breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Export' }],
+    breadcrumb: [{ label: 'Bacheca', href: '/admin' }, { label: 'Export' }],
   }));
 });
 
