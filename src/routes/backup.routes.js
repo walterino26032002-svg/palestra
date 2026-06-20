@@ -48,11 +48,13 @@ router.get('/backup', (req, res) => {
       <td class="hide-mobile">${escapeHtml(fmtDateTimeFull(b.modificato_il))}</td>
       <td class="col-right nowrap">
         <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Scarica</a>
-        <form method="POST" action="/admin/backup/restore" style="display:inline"
-              onsubmit="return confirm('Ripristinare questo backup? Verrà prima creato un backup di emergenza dello stato attuale.');">
-          <input type="hidden" name="filename" value="${escapeHtml(b.filename)}">
-          <button type="submit" class="btn btn-danger small">Ripristina</button>
-        </form>
+        <div style="margin-top:4px">
+          <form method="POST" action="/admin/backup/restore"
+                onsubmit="return confirm('Ripristinare questo backup? Verrà prima creato un backup di emergenza dello stato attuale.');">
+            <input type="hidden" name="filename" value="${escapeHtml(b.filename)}">
+            <button type="submit" class="btn btn-danger small">Ripristina</button>
+          </form>
+        </div>
       </td>
     </tr>`).join('') || `<tr><td colspan="4" class="muted">Nessun backup presente.</td></tr>`;
 
@@ -65,23 +67,25 @@ router.get('/backup', (req, res) => {
       <div class="rc-meta"><span>${escapeHtml(fmtDateTimeFull(b.modificato_il))}</span></div>
       <div class="rc-act">
         <a class="btn small" href="/admin/backup/download/${encodeURIComponent(b.filename)}">Scarica</a>
-        <form method="POST" action="/admin/backup/restore" style="display:inline"
-              onsubmit="return confirm('Ripristinare questo backup? Verrà prima creato un backup di emergenza dello stato attuale.');">
-          <input type="hidden" name="filename" value="${escapeHtml(b.filename)}">
-          <button type="submit" class="btn btn-danger small">Ripristina</button>
-        </form>
+        <div style="margin-top:4px">
+          <form method="POST" action="/admin/backup/restore"
+                onsubmit="return confirm('Ripristinare questo backup? Verrà prima creato un backup di emergenza dello stato attuale.');">
+            <input type="hidden" name="filename" value="${escapeHtml(b.filename)}">
+            <button type="submit" class="btn btn-danger small">Ripristina</button>
+          </form>
+        </div>
       </div>
     </div>`).join('') || `<div class="empty-state"><h3>Nessun backup</h3><p class="muted">Usa "Crea backup ora" per generarne uno.</p></div>`;
 
+  const TIPO_LABEL = { manual: 'Manuale', auto: 'Automatico', pre_restore: 'Prima del ripristino' };
+
   const logRows = log.map((l) => `
     <tr>
-      <td class="muted num">#${l.id}</td>
       <td>${escapeHtml(fmtDateTimeFull(l.creato_il))}</td>
-      <td>${escapeHtml(l.tipo)}</td>
+      <td>${escapeHtml(TIPO_LABEL[l.tipo] || l.tipo)}</td>
       <td>${l.esito === 'ok' ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-danger">Errore</span>'}</td>
-      <td class="hide-mobile"><code>${escapeHtml(l.percorso)}</code></td>
       <td class="muted small">${escapeHtml(l.messaggio || '')}</td>
-    </tr>`).join('') || `<tr><td colspan="6" class="muted">Nessun evento.</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="4" class="muted">Nessun evento.</td></tr>`;
 
   const body = `
     <header class="page-head">
@@ -111,19 +115,21 @@ router.get('/backup', (req, res) => {
     </div>
     <div class="card-list">${backupCards}</div>
 
-    <h2 class="section-gap">Log backup</h2>
-    <div class="table-wrap hide-mobile">
-      <table class="table">
-        <thead><tr><th>ID</th><th>Quando</th><th>Tipo</th><th>Esito</th><th>File</th><th>Note</th></tr></thead>
-        <tbody>${logRows}</tbody>
-      </table>
-    </div>
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Log backup</summary>
+      <div class="table-wrap hide-mobile" style="margin-top:10px">
+        <table class="table">
+          <thead><tr><th>Quando</th><th>Tipo</th><th>Esito</th><th>Note</th></tr></thead>
+          <tbody>${logRows}</tbody>
+        </table>
+      </div>
+    </details>
   `;
   res.send(adminLayout({
     title: 'Backup',
     user: req.admin,
     body,
-    breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Backup' }],
+    breadcrumb: [{ label: 'Bacheca', href: '/admin' }, { label: 'Backup' }],
   }));
 });
 
