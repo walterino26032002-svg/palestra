@@ -42,7 +42,7 @@
     var html = '';
     html += '<section class="hero">';
     html += '<p class="hero-eyebrow">Élite Training Club</p>';
-    html += '<h1 class="hero-title">Ciao, ' + esc(c.nome || 'Atleta') + '</h1>';
+    html += '<h1 class="hero-title">Pronto ad allenarti, ' + esc(c.nome || 'Atleta') + '?</h1>';
     html += '<p class="hero-status">' + badgeHtml(data.badge_label, data.badge_tone) + '</p>';
     html += '</section>';
 
@@ -52,24 +52,38 @@
       (checked ? badgeHtml('Effettuato', 'ok') : badgeHtml('In attesa', 'warn')) + '</span></div>';
     html += '</section>';
 
-    html += '<section class="card lift-card"><h2 class="section-title">Il tuo allenamento</h2>';
-    if (!ps) {
-      html += '<div class="empty-state">';
-      html += '<p class="empty-title">Nessuna seduta pronta</p>';
-      html += '<p class="muted">Il tuo coach non ha ancora pubblicato la prossima seduta. Torna più tardi.</p>';
-      html += '</div>';
-    } else {
+    html += '<section class="card lift-card"><h2 class="section-title">Scheda di oggi</h2>';
+
+    if (ps && checked && sbloccato) {
+      // Caso 3 — allenamento sbloccato
       html += '<p class="lift-meta">Settimana ' + esc(ps.indice_settimana) + ' · Seduta ' + esc(ps.indice_seduta) + '</p>';
       if (ps.titolo) html += '<p class="lift-title">' + esc(ps.titolo) + '</p>';
-      if (!checked) {
-        html += '<div class="hint-box">';
-        html += '<p class="hint-title">Passa la tessera per iniziare</p>';
-        html += '<p class="muted small">Avvicina la tua tessera al lettore Accademia per sbloccare la seduta di oggi.</p>';
-        html += '</div>';
-      } else if (sbloccato) {
-        html += '<p class="muted small">La seduta è sbloccata. Buon allenamento.</p>';
-        html += '<a class="btn btn-primary btn-block" href="/cliente/allenamento">Inizia l\'allenamento</a>';
-      }
+      html += '<div class="unlock-note unlock-ok"><span class="unlock-ico" aria-hidden="true">✓</span>';
+      html += '<p>Seduta sbloccata. Buon allenamento.</p></div>';
+      html += '<a class="btn btn-primary btn-block" href="/cliente/allenamento">Inizia l\'allenamento</a>';
+    } else if (ps && !checked) {
+      // Caso 1 — seduta pronta ma check-in non effettuato
+      html += '<p class="lift-meta">Settimana ' + esc(ps.indice_settimana) + ' · Seduta ' + esc(ps.indice_seduta) + '</p>';
+      if (ps.titolo) html += '<p class="lift-title">' + esc(ps.titolo) + '</p>';
+      html += '<div class="unlock-note unlock-wait">';
+      html += '<p class="unlock-title">Allenamento non ancora sbloccato</p>';
+      html += '<p class="muted">Passa la tessera in reception per sbloccare la seduta di oggi.</p>';
+      html += '</div>';
+      html += '<p class="unlock-hint muted small">Se sei in palestra senza tessera, chiedi allo staff di registrare il check-in manualmente.</p>';
+    } else if (!ps && checked) {
+      // Caso 2 — check-in fatto ma nessuna seduta PROSSIMA
+      html += '<div class="unlock-note unlock-wait">';
+      html += '<p class="unlock-title">Nessuna seduta disponibile</p>';
+      html += '<p class="muted">Il check-in è registrato, ma non c\'è una seduta impostata dal coach.</p>';
+      html += '</div>';
+      html += '<p class="unlock-hint muted small">Chiedi al trainer di preparare o impostare la prossima seduta.</p>';
+    } else {
+      // Nessuna seduta e nessun check-in
+      html += '<div class="unlock-note unlock-wait">';
+      html += '<p class="unlock-title">Allenamento non ancora sbloccato</p>';
+      html += '<p class="muted">Passa la tessera in reception per sbloccare la seduta di oggi.</p>';
+      html += '</div>';
+      html += '<p class="unlock-hint muted small">Se sei in palestra senza tessera, chiedi allo staff di registrare il check-in manualmente.</p>';
     }
     html += '</section>';
 
@@ -164,8 +178,10 @@
     return null;
   }
 
-  function exerciseRow(ex, fb, idx) {
+  function exerciseRow(ex, fb, idx, total) {
     var f = fb || {};
+    var stato = f.stato || '';
+    var done = (stato === 'completato' || stato === 'saltato') ? '1' : '0';
     var v = function (x) { return x == null ? '' : esc(x); };
     var target = [
       ex.serie != null ? esc(ex.serie) + ' serie' : '',
@@ -174,17 +190,25 @@
       ex.recupero ? 'rec ' + esc(ex.recupero) : '',
     ].filter(Boolean).join('  ');
     return '' +
-      '<div class="card exercise" data-ex="' + ex.id + '">' +
-        '<div class="ex-head"><span class="ex-num">' + (idx + 1) + '</span><strong>' + esc(ex.nome) + '</strong></div>' +
+      '<div class="card exercise" data-ex="' + ex.id + '" data-stato="' + stato + '" data-done="' + done + '">' +
+        '<div class="ex-head">' +
+          '<span class="ex-count">Esercizio ' + (idx + 1) + ' / ' + total + '</span>' +
+          '<span class="ex-done-badge' + (stato === 'saltato' ? ' ex-done-badge--skip' : '') + '" data-done-badge>' + (stato === 'saltato' ? 'Saltato' : 'Completato') + '</span>' +
+        '</div>' +
+        '<div class="ex-title-row"><span class="ex-num">' + (idx + 1) + '</span><strong class="ex-name">' + esc(ex.nome) + '</strong></div>' +
         (target ? '<p class="ex-target">' + target + '</p>' : '') +
         (ex.note ? '<p class="muted small ex-note">' + esc(ex.note) + '</p>' : '') +
         '<div class="grid grid-2">' +
           '<label>Carico usato<input type="text" inputmode="decimal" name="carico_effettivo" value="' + v(f.carico_effettivo) + '" placeholder="es. 60 kg"></label>' +
           '<label>Ripetizioni fatte<input type="text" inputmode="numeric" name="reps_effettive" value="' + v(f.reps_effettive) + '" placeholder="es. 8 8 7"></label>' +
         '</div>' +
-        '<label>Quanto è stato impegnativo? (1-5)<input type="number" min="1" max="5" name="difficolta" value="' + v(f.difficolta) + '"></label>' +
+        '<label>Sforzo percepito (1-5)<input type="number" min="1" max="5" name="difficolta" value="' + v(f.difficolta) + '" placeholder="1 = facile · 5 = massimo"></label>' +
         '<label>Note<textarea name="note" rows="2" placeholder="Sensazioni, dolori, appunti...">' + v(f.note) + '</textarea></label>' +
-        '<p class="save-state muted small" data-state></p>' +
+        '<div class="ex-foot">' +
+          '<p class="save-state muted small" data-state></p>' +
+          '<button type="button" class="btn btn-ghost small ex-skip' + (stato === 'saltato' ? ' ex-skip--active' : '') + '" data-skip>' + (stato === 'saltato' ? 'Saltato ✓' : 'Salta') + '</button>' +
+          '<button type="button" class="btn small ex-complete' + (stato === 'completato' ? ' btn-primary' : '') + '" data-complete>' + (stato === 'completato' ? 'Completato ✓' : 'Completa') + '</button>' +
+        '</div>' +
       '</div>';
   }
 
@@ -224,6 +248,8 @@
     var fbList = data.feedback || [];
     var fs = data.feedback_seduta || {};
 
+    var total = esercizi.length;
+
     var html = '';
     html += '<section class="hero hero-workout">';
     html += '<p class="hero-eyebrow">Allenamento di oggi</p>';
@@ -231,28 +257,84 @@
     html += '<p class="hero-status">Settimana ' + esc(seduta.indice_settimana) + ' · Seduta ' + esc(seduta.indice_seduta) + '  ' + badgeHtml('In corso', 'ok') + '</p>';
     html += '</section>';
 
+    if (total) {
+      html += '<div class="wk-progress"><div class="wk-progress-track"><div class="wk-progress-fill" id="wkProgressFill" style="width:0%"></div></div>' +
+        '<span class="wk-progress-label" id="wkProgressLabel">0 / ' + total + ' completati</span></div>';
+    }
+
     html += cronoHtml();
 
     html += '<div id="exercises">';
     for (var i = 0; i < esercizi.length; i++) {
-      html += exerciseRow(esercizi[i], feedbackFor(fbList, esercizi[i].id), i);
+      html += exerciseRow(esercizi[i], feedbackFor(fbList, esercizi[i].id), i, total);
     }
     if (!esercizi.length) {
       html += '<div class="card empty-state"><p class="empty-title">Nessun esercizio</p><p class="muted">Questa seduta non contiene esercizi.</p></div>';
     }
     html += '</div>';
 
-    html += '<section class="card"><h2 class="section-title">Come è andata?</h2>';
+    html += '<section class="card wk-finish"><h2 class="section-title">Come è andata?</h2>';
     html += '<label>Voto complessivo (1-5)<input type="number" id="sedutaVoto" min="1" max="5" value="' +
       (fs.voto == null ? '' : esc(fs.voto)) + '"></label>';
     html += '<label>Commento per il coach<textarea id="sedutaCommento" rows="3" placeholder="Com\'è andata la seduta?">' + esc(fs.commento || '') + '</textarea></label>';
-    html += '<button id="btnCompleta" class="btn btn-primary btn-block" data-seduta="' + seduta.id + '">Invia e concludi l\'allenamento</button>';
     html += '<p id="completaState" class="muted small"></p>';
     html += '</section>';
+
+    html += '<div class="wk-cta"><button id="btnCompleta" class="btn btn-primary btn-block" data-seduta="' + seduta.id + '">Concludi la seduta</button></div>';
 
     root.innerHTML = html;
 
     wireCrono();
+
+    function updateProgress() {
+      var rows = root.querySelectorAll('.exercise');
+      var completati = root.querySelectorAll('.exercise[data-stato="completato"]').length;
+      var saltati = root.querySelectorAll('.exercise[data-stato="saltato"]').length;
+      var gestiti = completati + saltati;
+      var fill = document.getElementById('wkProgressFill');
+      var label = document.getElementById('wkProgressLabel');
+      var pc = rows.length ? Math.round((gestiti / rows.length) * 100) : 0;
+      if (fill) fill.style.width = pc + '%';
+      // La barra avanza per completati + saltati; il testo distingue i due casi.
+      if (label) label.textContent = saltati > 0
+        ? completati + ' completati · ' + saltati + ' saltati'
+        : completati + ' / ' + rows.length + ' completati';
+    }
+
+    function applyStatoToRow(rowEl, stato, doneBtn, skipBtn) {
+      var s = stato || '';
+      rowEl.setAttribute('data-stato', s);
+      rowEl.setAttribute('data-done', (s === 'completato' || s === 'saltato') ? '1' : '0');
+      var badge = rowEl.querySelector('[data-done-badge]');
+      if (badge) {
+        badge.textContent = s === 'saltato' ? 'Saltato' : 'Completato';
+        badge.className = 'ex-done-badge' + (s === 'saltato' ? ' ex-done-badge--skip' : '');
+      }
+      if (doneBtn) {
+        doneBtn.textContent = s === 'completato' ? 'Completato ✓' : 'Completa';
+        doneBtn.className = 'btn small ex-complete' + (s === 'completato' ? ' btn-primary' : '');
+      }
+      if (skipBtn) {
+        skipBtn.textContent = s === 'saltato' ? 'Saltato ✓' : 'Salta';
+        skipBtn.className = 'btn btn-ghost small ex-skip' + (s === 'saltato' ? ' ex-skip--active' : '');
+      }
+    }
+
+    function setStato(rowEl, stato, doneBtn, skipBtn) {
+      var id = rowEl.getAttribute('data-ex');
+      var stateEl = rowEl.querySelector('[data-state]');
+      var payload = collectRow(rowEl);
+      payload.stato = stato;
+      if (stateEl) { stateEl.textContent = 'Salvataggio…'; stateEl.className = 'save-state muted small'; }
+      api('/cliente/api/esercizi/' + id + '/feedback', { method: 'POST', body: payload })
+        .then(function (res) {
+          applyStatoToRow(rowEl, (res.feedback && res.feedback.stato) || stato || '', doneBtn, skipBtn);
+          if (stateEl) { stateEl.textContent = '✓ Salvato'; stateEl.className = 'save-state save-ok small'; }
+          updateProgress();
+        }).catch(function (e) {
+          if (stateEl) { stateEl.textContent = 'Errore: ' + e.message; stateEl.className = 'save-state save-err small'; }
+        });
+    }
 
     // Autosave esercizi
     root.querySelectorAll('.exercise').forEach(function (rowEl) {
@@ -260,7 +342,21 @@
         el.addEventListener('input', function () { autosaveRow(rowEl); });
         el.addEventListener('change', function () { autosaveRow(rowEl); });
       });
+      // Completa / Salta: salva stato persistente nel DB (no toggle-off in V1).
+      var doneBtn = rowEl.querySelector('[data-complete]');
+      var skipBtn = rowEl.querySelector('[data-skip]');
+      if (doneBtn) doneBtn.addEventListener('click', function () {
+        if (rowEl.getAttribute('data-stato') === 'completato') return;
+        setStato(rowEl, 'completato', doneBtn, skipBtn);
+      });
+      if (skipBtn) skipBtn.addEventListener('click', function () {
+        if (rowEl.getAttribute('data-stato') === 'saltato') return;
+        var nextEl = rowEl.nextElementSibling;
+        setStato(rowEl, 'saltato', doneBtn, skipBtn);
+        if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
+    updateProgress();
 
     // Completa
     var btn = document.getElementById('btnCompleta');

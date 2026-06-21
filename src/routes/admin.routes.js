@@ -30,6 +30,31 @@ function fmtEurFromCent(cent) {
   return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
 }
 
+/** Normalizza una parola per username: minuscolo, no accenti, solo alfanumerici. */
+function cleanPart(s) {
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Genera username unico nel DB: base = nome.cognome.
+ * Se occupato da altro cliente → nome.cognome2, nome.cognome3, …
+ * @param {string} nome @param {string} cognome @param {number} excludeId - id del cliente da escludere dal controllo
+ */
+function generaUsernameUnico(nome, cognome, excludeId) {
+  const n = cleanPart(nome), c = cleanPart(cognome);
+  if (!n || !c) return null;
+  const db = getDb();
+  const check = db.prepare('SELECT id FROM clienti WHERE username = ? AND id != ?');
+  let candidate = `${n}.${c}`;
+  let i = 2;
+  while (check.get(candidate, excludeId || 0)) {
+    candidate = `${n}.${c}${i++}`;
+  }
+  return candidate;
+}
+
 // -------------------------------------------------------------
 // HEALTH HTML placeholder route (niente duplicato con /health JSON)
 // -------------------------------------------------------------
@@ -217,6 +242,8 @@ router.post('/clienti', express.urlencoded({ extended: false }), (req, res) => {
       password: password || null,
       attivo: attivo === '0' ? 0 : 1,
     });
+    const uname = generaUsernameUnico(nome, cognome, id);
+    if (uname) getDb().prepare('UPDATE clienti SET username = ? WHERE id = ? AND (username IS NULL OR username = \'\')').run(uname, id);
     return backWithMsg(res, `/admin/clienti/${id}`, 'Cliente creato.', 'ok');
   } catch (e) {
     if (e.code === 'validation') return backWithMsg(res, '/admin/clienti/nuovo', e.message, 'err');
@@ -335,12 +362,19 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
                <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco 4×5</a>`}
         </div>
         <div class="card">
-          <h2>Password accesso cliente</h2>
+          <h2>Accesso cliente</h2>
+          <p class="muted small" style="margin-bottom:12px"><strong>Nome utente</strong><br>
+            ${cliente.username
+              ? `<code>${escapeHtml(cliente.username)}</code>`
+              : (cleanPart(cliente.nome) && cleanPart(cliente.cognome)
+                ? '<span class="muted">Da attivare — salva l\'anagrafica per generare il nome utente.</span>'
+                : '<span class="muted">Non disponibile — compila Nome e Cognome in Anagrafica.</span>')}
+          </p>
           <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
             <label>Nuova password <input name="password" type="password" required></label>
             <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
           </form>
-          <p class="muted small">Verrà salvata come hash bcrypt.</p>
+          <p class="muted small">La password non è visibile dopo il salvataggio. Puoi solo impostarne una nuova.</p>
         </div>
       </div>
     </section>
@@ -418,6 +452,8 @@ router.post('/clienti/:id(\\d+)', express.urlencoded({ extended: false }), (req,
       note,
       attivo: attivo === undefined ? undefined : (attivo === '1' ? 1 : 0),
     });
+    const uname = generaUsernameUnico(nome, cognome, id);
+    if (uname) getDb().prepare('UPDATE clienti SET username = ? WHERE id = ? AND (username IS NULL OR username = \'\')').run(uname, id);
     return backWithMsg(res, `/admin/clienti/${id}`, 'Anagrafica aggiornata.', 'ok');
   } catch (e) {
     if (e.code === 'not_found') return backWithMsg(res, '/admin/clienti', 'Cliente non trovato.', 'err');

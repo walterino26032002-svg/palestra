@@ -105,7 +105,10 @@ router.get('/cliente/allenamento', (req, res) => {
     return res.send(buildAllenamentoPageHtml(req));
   } catch (err) {
     if (err.code === 'checkin_required' || err.code === 'no_workout') {
-      return res.redirect(303, `/cliente?err=${encodeURIComponent(err.message)}`);
+      const msg = err.code === 'checkin_required'
+        ? 'Passa la tessera al lettore per sbloccare l\'allenamento'
+        : 'Nessuna seduta pronta al momento';
+      return res.redirect(303, `/cliente?err=${encodeURIComponent(msg)}`);
     }
     return routeError(res, req, err, '/cliente');
   }

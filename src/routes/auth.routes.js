@@ -74,12 +74,12 @@ function buildClienteLoginHtml({ error } = {}) {
   <h1>Accedi alla tua scheda</h1>
   <p class="muted">L'allenamento di oggi ti aspetta</p>
   ${errBlock}
-  <form method="POST" action="/cliente/login" autocomplete="off">
-    <label>Nome utente, email o telefono
-      <input name="identifier" type="text" autocomplete="off" required autofocus>
+  <form method="POST" action="/cliente/login">
+    <label>Nome utente
+      <input name="identifier" type="text" autocomplete="username" placeholder="nome.cognome" required autofocus>
     </label>
     <label>Password
-      <input name="password" type="password" autocomplete="off" required>
+      <input name="password" type="password" autocomplete="current-password" required>
     </label>
     <button type="submit" class="btn btn-primary btn-block">Accedi alla tua scheda</button>
   </form>
