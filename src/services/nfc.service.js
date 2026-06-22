@@ -118,6 +118,17 @@ function creaOAssegna({ tesseraUid, clienteId }) {
   return tx();
 }
 
+function disassocia(id) {
+  const db = getDb();
+  const row = db.prepare('SELECT id, tessera_uid, cliente_id FROM nfc_tessere WHERE id = ?').get(id);
+  if (!row) { const e = new Error('Tessera non trovata'); e.code = 'not_found'; throw e; }
+  if (!row.cliente_id) { const e = new Error('Tessera non assegnata'); e.code = 'validation'; throw e; }
+  db.transaction(() => {
+    db.prepare(`UPDATE storico_nfc SET rimossa_il = datetime('now') WHERE tessera_uid = ? AND cliente_id = ? AND rimossa_il IS NULL`).run(row.tessera_uid, row.cliente_id);
+    db.prepare(`UPDATE nfc_tessere SET cliente_id = NULL, assegnata_il = NULL WHERE id = ?`).run(id);
+  })();
+}
+
 function toggleAttiva(id) {
   const db = getDb();
   const row = db.prepare('SELECT attiva FROM nfc_tessere WHERE id = ?').get(id);
@@ -162,6 +173,7 @@ module.exports = {
   findByUid,
   tesseraAssegnata,
   creaOAssegna,
+  disassocia,
   toggleAttiva,
   listEventi,
   insertEvento,

@@ -66,6 +66,9 @@ router.get('/nfc', (req, res) => {
         <form method="POST" action="/admin/nfc/${t.id}/toggle-attiva" style="display:inline">
           <button type="submit" class="btn btn-ghost small" onclick="return confirm('${t.attiva ? 'Disattivare questa tessera? Il cliente non potrà fare check-in.' : 'Riattivare questa tessera?'}')">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
         </form>
+        ${t.cliente_id ? `<form method="POST" action="/admin/nfc/${t.id}/disassocia" style="display:inline">
+          <button type="submit" class="btn btn-ghost small" onclick="return confirm('Rimuovere questa tessera dal cliente?')">Disassocia</button>
+        </form>` : ''}
       </td>
     </tr>`;
   }).join('') || `<tr><td colspan="5" class="muted">Nessuna tessera.</td></tr>`;
@@ -87,6 +90,9 @@ router.get('/nfc', (req, res) => {
         <form method="POST" action="/admin/nfc/${t.id}/toggle-attiva" style="display:inline">
           <button type="submit" class="btn btn-ghost small" onclick="return confirm('${t.attiva ? 'Disattivare questa tessera? Il cliente non potrà fare check-in.' : 'Riattivare questa tessera?'}')">${t.attiva ? 'Disattiva' : 'Riattiva'}</button>
         </form>
+        ${t.cliente_id ? `<form method="POST" action="/admin/nfc/${t.id}/disassocia" style="display:inline">
+          <button type="submit" class="btn btn-ghost small" onclick="return confirm('Rimuovere questa tessera dal cliente?')">Disassocia</button>
+        </form>` : ''}
       </div>
     </div>`;
   }).join('') || `<div class="empty-state"><h3>Nessuna tessera</h3><p class="muted">Assegna la prima tessera con "Nuova tessera".</p></div>`;
@@ -184,6 +190,17 @@ router.post('/nfc', express.urlencoded({ extended: false }), (req, res) => {
     if (e.code === 'not_found') return backWithMsg(res, '/admin/nfc/nuova', e.message, 'err');
     console.error(e);
     return backWithMsg(res, '/admin/nfc/nuova', 'Errore assegnazione tessera.', 'err');
+  }
+});
+
+// POST /admin/nfc/:id/disassocia
+router.post('/nfc/:id(\\d+)/disassocia', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    nfcService.disassocia(id);
+    return backWithMsg(res, '/admin/nfc', 'Tessera disassociata.', 'ok');
+  } catch (e) {
+    return backWithMsg(res, '/admin/nfc', e.message || 'Errore.', 'err');
   }
 });
 
