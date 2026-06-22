@@ -359,7 +359,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
                  : ''}
                <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Apri scheda completa</a>`
             : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
-               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco 4×5</a>`}
+               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco</a>`}
         </div>
         <div class="card">
           <h2>Accesso cliente</h2>

@@ -13,7 +13,7 @@ const NAV = [
   { href: '/admin',         label: 'Bacheca',        countHref: '/admin/bacheca' },
   { href: '/admin/clienti', label: 'Clienti' },
   { href: '/admin/servizi', label: 'Pacchetti' },
-  { href: '/admin/schede',  label: 'Allenamenti',    countHref: '/admin/revisioni',
+  { href: '/admin/schede',  label: 'Schede',
     activeOn: ['/admin/revisioni'] },
   { href: '/admin/nfc',     label: 'NFC / Ingressi' },
   { href: '/admin/export',  label: 'Sistema',
