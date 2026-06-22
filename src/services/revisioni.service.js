@@ -166,8 +166,18 @@ function preparaProssimaSeduta(sedutaId) {
   const clienteId = origine.cliente_id;
 
   const tx = db.transaction(() => {
-    // 1) copia esercizi origine -> destinazione (svuota destinazione, no feedback)
-    const copiati = seduteService.copiaEserciziDa({ daSedutaId: origine.id, aSedutaId: dest.id });
+    // 1) determina sorgente per la copia:
+    //    se dest è week > 1, usa "week-1 + stesso indice_seduta" come riferimento
+    let sorgId = origine.id;
+    if (dest.indice_settimana > 1) {
+      const rif = db.prepare(`
+        SELECT id FROM sedute
+        WHERE blocco_id = ? AND indice_settimana = ? AND indice_seduta = ?
+        LIMIT 1
+      `).get(origine.blocco_id, dest.indice_settimana - 1, dest.indice_seduta);
+      if (rif) sorgId = rif.id;
+    }
+    const copiati = seduteService.copiaEserciziDa({ daSedutaId: sorgId, aSedutaId: dest.id });
 
     // 2) precedente PROSSIMA del cliente (se esiste e NON e' la destinazione) -> BOZZA
     //    SALTATA si usa solo quando il coach marca esplicitamente una seduta.
