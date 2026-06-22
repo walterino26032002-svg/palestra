@@ -1,0 +1,22 @@
+[Unit]
+Description=Gestionale Palestra
+After=network.target
+
+[Service]
+Type=simple
+# Utente che esegue il processo — cambia se non usi l'utente 'pi'
+User=pi
+# Directory del repository — adatta al path reale sul tuo Raspberry
+WorkingDirectory=/home/pi/gestionale-palestra
+# Variabili d'ambiente lette da .env (non committare .env)
+EnvironmentFile=/home/pi/gestionale-palestra/.env
+# Path node: verifica con `which node` sul Raspberry
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+# Log su journald (leggi con: journalctl -u gestionale-palestra -f)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
