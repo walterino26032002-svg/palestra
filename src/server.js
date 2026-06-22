@@ -78,7 +78,7 @@ app.get('/api/me', (req, res) => {
 app.get('/', (req, res) => {
   if (req.admin && req.admin.id) return res.redirect('/admin');
   if (req.cliente && req.cliente.id) return res.redirect('/cliente');
-  return res.redirect('/login');
+  return res.redirect('/cliente/login');
 });
 
 // 404 JSON
