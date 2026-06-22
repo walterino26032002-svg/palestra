@@ -24,6 +24,7 @@ const { adminLayout } = require('../views/adminLayout');
 const { escapeHtml, alertBlock, backWithMsg, fmtDateTime } = require('../utils/helpers');
 const { buildAdminCounts } = require('../utils/adminCounts');
 const { getDb } = require('../db/connection');
+const bcrypt = require('bcrypt');
 
 function fmtEurFromCent(cent) {
   const n = Number(cent || 0) / 100;
@@ -740,5 +741,56 @@ function renderClienteForm({ mode, cliente, error }) {
     </form>
   `;
 }
+
+// -------------------------------------------------------------
+// SISTEMA — cambio password admin
+// -------------------------------------------------------------
+router.get('/sistema', (req, res) => {
+  const body = `
+    <header class="page-head">
+      <p class="eyebrow">Impostazioni</p>
+      <h1>Sistema</h1>
+    </header>
+    ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
+    <div class="card form-stacked" style="max-width:480px">
+      <h2>Cambia password</h2>
+      <form method="POST" action="/admin/sistema/password" autocomplete="off">
+        <label>Password attuale
+          <input name="password_attuale" type="password" required>
+        </label>
+        <label>Nuova password
+          <input name="nuova_password" type="password" required minlength="8">
+        </label>
+        <label>Conferma nuova password
+          <input name="conferma_password" type="password" required minlength="8">
+        </label>
+        <div><button type="submit" class="btn btn-primary">Aggiorna password</button></div>
+      </form>
+    </div>
+  `;
+  res.send(adminLayout({
+    title: 'Sistema',
+    user: req.admin,
+    body,
+    breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Sistema' }],
+  }));
+});
+
+router.post('/sistema/password', express.urlencoded({ extended: false }), (req, res) => {
+  const { password_attuale, nuova_password, conferma_password } = req.body || {};
+  const back = (msg) => backWithMsg(res, '/admin/sistema', msg, 'err');
+
+  if (!password_attuale || !nuova_password || !conferma_password) return back('Tutti i campi sono obbligatori.');
+  if (nuova_password !== conferma_password) return back('Le password non coincidono.');
+  if (nuova_password.length < 8) return back('La nuova password deve essere di almeno 8 caratteri.');
+
+  const db = getDb();
+  const admin = db.prepare('SELECT id, password_hash FROM admin WHERE id = ?').get(req.admin.id);
+  if (!admin || !bcrypt.compareSync(password_attuale, admin.password_hash)) return back('Password attuale non corretta.');
+
+  const hash = bcrypt.hashSync(nuova_password, 10);
+  db.prepare("UPDATE admin SET password_hash = ?, updated_at = datetime('now') WHERE id = ?").run(hash, admin.id);
+  return backWithMsg(res, '/admin/sistema', 'Password aggiornata.', 'ok');
+});
 
 module.exports = router;

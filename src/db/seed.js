@@ -2,29 +2,32 @@
 
 /**
  * Seed iniziale.
- * - Crea utente admin (admin / admin123) se non esiste.
- * - Idempotente: richiamabile più volte senza duplicati.
+ * Legge INITIAL_ADMIN_USERNAME e INITIAL_ADMIN_PASSWORD da .env.
+ * - Idempotente: se lo username esiste già, non fa nulla.
+ * - Esce con errore se le variabili obbligatorie mancano.
  */
 
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { getDb, closeDb } = require('./connection');
 
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
-
 function seedAdmin() {
-  const db = getDb();
-  const existing = db.prepare('SELECT id FROM admin WHERE username = ?').get(ADMIN_USERNAME);
+  const username = process.env.INITIAL_ADMIN_USERNAME;
+  const password = process.env.INITIAL_ADMIN_PASSWORD;
 
+  if (!username) throw new Error('INITIAL_ADMIN_USERNAME non impostata in .env');
+  if (!password) throw new Error('INITIAL_ADMIN_PASSWORD non impostata in .env');
+
+  const db = getDb();
+  const existing = db.prepare('SELECT id FROM admin WHERE username = ?').get(username);
   if (existing) {
-    console.log(`Admin "${ADMIN_USERNAME}" già presente (id=${existing.id}). Nessuna azione.`);
+    console.log(`Admin "${username}" già presente (id=${existing.id}). Nessuna azione.`);
     return;
   }
 
-  const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-  db.prepare('INSERT INTO admin (username, password_hash) VALUES (?, ?)').run(ADMIN_USERNAME, hash);
-  console.log(`Admin "${ADMIN_USERNAME}" creato. Password iniziale: ${ADMIN_PASSWORD}`);
-  console.log('!! Cambiala al primo login !!');
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare('INSERT INTO admin (username, password_hash) VALUES (?, ?)').run(username, hash);
+  console.log(`Admin "${username}" creato.`);
 }
 
 function main() {
@@ -35,8 +38,6 @@ function main() {
   }
 }
 
-if (require.main === module) {
-  main();
-}
+if (require.main === module) main();
 
 module.exports = { seedAdmin };
