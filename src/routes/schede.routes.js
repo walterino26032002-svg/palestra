@@ -352,7 +352,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
         <h1>Settimana ${seduta.indice_settimana} · Seduta ${seduta.indice_seduta} ${statoBadge(seduta.stato)}</h1>
       </div>
       <div class="toolbar">
-        <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
+        <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/stampa" target="_blank">Stampa scheda</a>
         <a class="btn" href="/admin/clienti/${seduta.cliente_id}/scheda">← Scheda cliente</a>
       </div>
     </div>
@@ -715,7 +715,7 @@ router.get('/sedute/:id(\\d+)/revisione', (req, res) => {
     <div class="row-between">
       <h1>Revisione — <a href="/admin/clienti/${cliente.id}">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</a></h1>
       <div>
-        <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/pdf">PDF seduta</a>
+        <a class="btn btn-ghost" href="/admin/sedute/${seduta.id}/stampa" target="_blank">Stampa scheda</a>
         <a class="btn" href="/admin/clienti/${cliente.id}/scheda">← Scheda cliente</a>
         <a class="btn" href="/admin/revisioni">← Revisioni</a>
       </div>

@@ -240,7 +240,72 @@ ${tableHtml}
   res.send(html);
 });
 
+// STAMPA HTML seduta singola — stesso stile A4 landscape
+router.get('/sedute/:id(\\d+)/stampa', (req, res) => {
+  const sedutaId = parseInt(req.params.id, 10);
+  const seduta   = seduteService.getSeduta(sedutaId);
+  if (!seduta) return res.status(404).send('Seduta non trovata');
+  const cliente  = clientiService.getCliente(seduta.cliente_id);
+  const esercizi = eserciziService.listEserciziSeduta(sedutaId);
+  const dataPrint = new Date().toLocaleDateString('it-IT');
 
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  const nomeCliente = cliente ? `${esc(cliente.cognome)} ${esc(cliente.nome)}` : '';
+  const sessionLabel = `Settimana ${esc(seduta.indice_settimana)} &middot; Seduta ${esc(seduta.indice_seduta)}${seduta.titolo ? ' &mdash; ' + esc(seduta.titolo) : ''}`;
+
+  const tableHtml = `<section class="pw-session"><table class="pw-table"><thead><tr>
+    <th class="pw-col-num">#</th><th class="pw-col-name">Esercizio</th>
+    <th class="pw-col-sm">Serie</th><th class="pw-col-sm">Reps</th>
+    <th class="pw-col-md">Carico previsto</th><th class="pw-col-sm">Rec.</th>
+    <th class="pw-col-note">Note coach</th><th class="pw-col-fill">Carico usato</th>
+    <th class="pw-col-fill">Reps fatte</th><th class="pw-col-sm">RIR/RPE</th>
+    <th class="pw-col-note">Note cliente</th>
+  </tr></thead><tbody>${esercizi.length ? esercizi.map((ex,i)=>`<tr>
+    <td class="pw-col-num pw-center">${String(i+1).padStart(2,'0')}</td>
+    <td class="pw-col-name"><strong>${esc(ex.nome)}</strong></td>
+    <td class="pw-col-sm pw-center">${esc(ex.serie??'')}</td>
+    <td class="pw-col-sm pw-center">${esc(ex.ripetizioni??'')}</td>
+    <td class="pw-col-md">${esc(ex.carico??'')}</td>
+    <td class="pw-col-sm pw-center">${esc(ex.recupero??'')}</td>
+    <td class="pw-col-note pw-small">${esc(ex.note??'')}</td>
+    <td class="pw-col-fill pw-writeable"></td><td class="pw-col-fill pw-writeable"></td>
+    <td class="pw-col-sm pw-writeable"></td><td class="pw-col-note pw-writeable"></td>
+  </tr>`).join('') : '<tr><td colspan="11" style="text-align:center;color:#999;padding:10px">Nessun esercizio.</td></tr>'}
+  </tbody></table></section>`;
+
+  res.setHeader('Content-Type','text/html; charset=utf-8');
+  res.send(`<!doctype html><html lang="it"><head><meta charset="utf-8">
+<title>Scheda allenamento &mdash; ${nomeCliente}</title>
+<style>@page{size:A4 landscape;margin:10mm}*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:10px;color:#111;background:#fff}
+@media screen{body{max-width:277mm;margin:10mm auto;padding:8mm}}
+.pw-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #111;padding-bottom:5px;margin-bottom:10px}
+.pw-header-left h1{font-size:13px;font-weight:700}.pw-header-left p{font-size:9px;color:#555;margin-top:2px}
+.pw-header-right{font-size:8.5px;color:#777;text-align:right}
+.pw-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.pw-table th{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#555;border:0.5px solid #bbb;padding:3px 4px;background:#f5f5f5}
+.pw-table td{font-size:9.5px;border:0.5px solid #ccc;padding:5px 4px;vertical-align:top;height:22px;word-wrap:break-word}
+.pw-table tbody tr:nth-child(even) td{background:#fafafa}.pw-writeable{background:#fff!important}
+.pw-col-num{width:24px}.pw-col-name{width:120px}.pw-col-sm{width:38px}.pw-col-md{width:58px}.pw-col-fill{width:55px}.pw-col-note{width:90px}
+.pw-small{font-size:8.5px;color:#444}.pw-center{text-align:center}
+@media print{body{margin:0;padding:0}.pw-table tr{break-inside:avoid;page-break-inside:avoid}}
+</style></head><body>
+<header class="pw-header">
+  <div class="pw-header-left"><h1>Scheda allenamento</h1><p>${nomeCliente} &nbsp;&mdash;&nbsp; ${sessionLabel}</p></div>
+  <div class="pw-header-right">Data: ${dataPrint}</div>
+</header>
+${tableHtml}
+</body></html>`);
+});
+
+
+
+// =====================================================================
+// PDF (route backend intatte)
+// =====================================================================
 router.get('/clienti/:id(\\d+)/scheda/pdf', (req, res) => {
   handleExport(res, () => exportService.streamSchedaPdf(res, parseInt(req.params.id, 10)));
 });
