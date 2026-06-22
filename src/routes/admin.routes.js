@@ -418,6 +418,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     <details class="section-gap">
       <summary style="cursor:pointer;font-weight:600;padding:10px 0">Export cliente</summary>
       <div class="toolbar" style="margin-top:10px">
+        <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda/stampa" target="_blank">Stampa scheda</a>
         <a class="btn" href="/admin/clienti/${cliente.id}/scheda/pdf">PDF scheda</a>
         <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
         <a class="btn" href="/admin/clienti/${cliente.id}/report/pdf">PDF report</a>
