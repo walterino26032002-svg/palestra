@@ -754,6 +754,141 @@ code {
 .wk-cta .btn-block { box-shadow: var(--shadow); }
 .wk-finish { padding-bottom: 8px; }
 
+/* ============================================================
+   AREA CLIENTE — classi scoped (STEP 5C, non tocca admin)
+   Tutte le regole sono sotto .cliente-body o prefisso .ck-
+   ============================================================ */
+.cliente-body { background: #f5f2ee; }
+.cliente-app   { display:flex; flex-direction:column; gap:14px; padding-top:max(24px,env(safe-area-inset-top)); padding-bottom:max(40px,env(safe-area-inset-bottom)); }
+
+/* typography */
+.ck-eyebrow  { font-size:10px; font-weight:700; letter-spacing:.28em; text-transform:uppercase; color:#78716c; margin:0 0 10px; }
+.ck-h1       { font-size:2.4rem; font-weight:700; line-height:1.05; letter-spacing:-.025em; color:#141210; margin:0 0 8px; }
+.ck-name     { display:block; }
+.ck-subtitle { font-size:.9rem; color:#78716c; margin:0 0 4px; }
+.ck-muted    { color:#78716c; }
+.ck-back {
+  font-size:.82rem; color:#78716c; text-decoration:none; margin-bottom:4px;
+  display:inline-flex; align-items:center; gap:4px;
+  background:none; border:none; padding:0; cursor:pointer; font-family:inherit;
+}
+.ck-back:hover { color:#141210; }
+.ck-label    { font-size:10px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:#78716c; margin:0 0 14px; }
+
+/* badge */
+.ck-badge         { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
+.ck-badge--danger { background:#f5e5e4; color:#9b3a35; }
+
+/* card */
+.ck-card { background:#fff; border:1px solid #e2dbd2; border-radius:18px; padding:20px; }
+
+/* membership */
+.ck-mem-body  { margin-bottom:10px; }
+.ck-big-num   { font-size:3rem; font-weight:700; letter-spacing:-.04em; line-height:1; color:#141210; }
+.ck-big-unit  { font-size:.85rem; color:#78716c; }
+.ck-mem-checkin     { font-size:.82rem; color:#78716c; margin:0; }
+.ck-mem-checkin.ok  { color:#3d6b48; font-weight:600; }
+.ck-mem-hint        { font-size:.82rem; color:#9b3a35; margin:0; }
+
+/* action cards */
+.ck-action-card {
+  display:flex; align-items:center; gap:14px;
+  background:#fff; border:1px solid #e2dbd2; border-radius:18px;
+  padding:16px 18px; text-decoration:none; color:#141210; transition:border-color .12s;
+}
+.ck-action-card:hover { border-color:#141210; }
+.ck-action-card--dim  { opacity:.65; cursor:default; }
+.ck-action-icon {
+  flex-shrink:0; width:40px; height:40px; border-radius:10px;
+  background:#141210; color:#fff;
+  display:inline-flex; align-items:center; justify-content:center; font-size:1rem;
+}
+.ck-action-card--dim .ck-action-icon { background:#eeebe5; color:#78716c; }
+.ck-action-body  { flex:1; min-width:0; }
+.ck-action-title { font-weight:700; font-size:1rem; margin:0 0 3px; }
+.ck-action-sub   { font-size:.8rem; color:#78716c; margin:0; }
+.ck-action-arrow { font-size:.9rem; color:#78716c; flex-shrink:0; }
+
+/* exercise overview */
+.ck-overview-list { display:flex; flex-direction:column; gap:10px; }
+.ck-ex-overview { display:flex; align-items:flex-start; gap:14px; width:100%; text-align:left; background:#fff; border:1px solid #e2dbd2; border-radius:18px; padding:16px; cursor:pointer; font-family:inherit; transition:border-color .12s; }
+.ck-ex-overview:hover { border-color:#141210; }
+.ck-next-todo { display:block; width:100%; background:none; border:none; padding:10px 0; font-size:.85rem; font-weight:600; color:#141210; cursor:pointer; font-family:inherit; text-align:center; }
+.ck-bb-back:disabled, .ck-bb-skip:disabled, .ck-bb-complete:disabled { opacity:.4; cursor:default; }
+.ck-ex-num    { flex-shrink:0; font-size:1.1rem; font-weight:800; min-width:28px; color:#141210; }
+.ck-ex-info   { flex:1; min-width:0; }
+.ck-ex-name   { font-weight:700; font-size:1rem; margin:0 0 4px; }
+.ck-ex-params { font-size:.8rem; color:#78716c; margin:0; font-weight:600; }
+.ck-ex-note   { font-size:.78rem; color:#78716c; font-style:italic; margin:4px 0 0; }
+
+/* stepper */
+.ck-stepper { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; }
+.ck-dot { height:8px; border-radius:999px; border:none; cursor:pointer; padding:0; background:#e2dbd2; width:8px; transition:width .15s,background .15s; }
+.ck-dot--cur  { width:22px; background:#141210; }
+.ck-dot--done { background:#3d6b48; }
+.ck-dot--skip { background:#78716c; opacity:.4; }
+
+/* live exercise card */
+.ck-live-card { background:#fff; border:1px solid #e2dbd2; border-radius:18px; padding:20px; }
+.ck-live-head   { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:16px; }
+.ck-live-count  { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:#78716c; margin:0 0 4px; }
+.ck-live-name   { font-size:1.2rem; font-weight:700; margin:0 0 4px; }
+.ck-live-params { font-size:.82rem; color:#78716c; font-weight:600; margin:0; }
+.ck-live-note   { font-size:.78rem; color:#78716c; font-style:italic; margin:4px 0 0; }
+.ck-stato-pill  { flex-shrink:0; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:4px 10px; border-radius:999px; background:#eeebe5; color:#78716c; }
+.ck-stato-completato { background:#e6f0e9; color:#3d6b48; }
+.ck-stato-saltato    { background:#eeebe5; opacity:.5; }
+
+/* feedback fields — scoped al live card */
+.ck-fb-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.ck-fl, .ck-fl--full { display:flex; flex-direction:column; gap:5px; }
+.ck-fl--full { margin-bottom:10px; }
+.ck-fl span, .ck-fl--full span { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#78716c; }
+.ck-fl input, .ck-fl--full input, .ck-fl textarea, .ck-fl--full textarea {
+  background:#eeebe5; border:1px solid #e2dbd2; border-radius:10px;
+  padding:10px 12px; font-size:.95rem; color:#141210; font-family:inherit; width:100%;
+}
+.ck-fl input:focus, .ck-fl--full input:focus,
+.ck-fl textarea:focus, .ck-fl--full textarea:focus {
+  outline:none; border-color:#141210; box-shadow:0 0 0 2px rgba(20,18,16,.08);
+}
+
+/* save state */
+.ck-save     { font-size:.74rem; color:#78716c; min-height:1.2em; margin:6px 0 0; display:block; }
+.ck-save-ok  { color:#3d6b48; }
+.ck-save-err { color:#9b3a35; }
+
+/* bottom bar */
+.ck-bottom-bar { display:grid; grid-template-columns:44px 1fr 1fr; gap:8px; margin:14px 0 4px; }
+.ck-bb-back, .ck-bb-skip, .ck-bb-complete {
+  height:48px; border-radius:12px; font-size:.9rem; font-weight:700;
+  font-family:inherit; cursor:pointer; border:1px solid #e2dbd2; transition:background .12s,transform .06s;
+}
+.ck-bb-back, .ck-bb-skip  { background:#fff; color:#141210; }
+.ck-bb-complete { background:#141210; color:#fff; border-color:#141210; }
+.ck-bb-back:hover, .ck-bb-skip:hover { background:#eeebe5; }
+.ck-bb-complete:hover { background:#2d2a26; }
+.ck-bb-back:active, .ck-bb-skip:active, .ck-bb-complete:active { transform:scale(.97); }
+.ck-bb-back:disabled { opacity:.3; cursor:default; }
+
+/* summary */
+.ck-summary { background:#fff; border:1px solid #e2dbd2; border-radius:18px; padding:20px; margin-top:8px; }
+.ck-summary h2 { font-size:1.2rem; font-weight:700; margin:0 0 6px; }
+
+/* CTA primaria */
+.ck-btn-primary {
+  display:block; width:100%; height:56px; border-radius:14px;
+  background:#141210; color:#fff; border:none;
+  font-size:1rem; font-weight:700; font-family:inherit; cursor:pointer;
+  margin-top:14px; transition:background .12s,transform .06s;
+}
+.ck-btn-primary:hover  { background:#2d2a26; }
+.ck-btn-primary:active { transform:scale(.98); }
+
+/* workout header text */
+.ck-workout-title { font-size:1.6rem; font-weight:700; letter-spacing:-.02em; margin:6px 0 4px; }
+.ck-workout-progress { font-size:.82rem; color:#78716c; margin:0 0 12px; }
+
 @media (prefers-reduced-motion: reduce) {
   .wk-progress-fill { transition: none; }
 }
@@ -962,3 +1097,13 @@ tbody tr { transition: background .12s; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .btn:hover, .card-link:hover, .row-card:hover, a.card:hover { transform: none; }
 }
+
+/* riepilogo allenamento */
+.ck-riepilogo { background:#fff; border:1px solid #e2dbd2; border-radius:18px; padding:16px 20px; }
+.ck-riepilogo .ck-eyebrow { margin-bottom:12px; }
+.ck-riepilogo-row { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-top:1px solid #f0ece6; }
+.ck-riepilogo-row:first-of-type { border-top:none; padding-top:0; }
+.ck-riepilogo-info { flex:1; min-width:0; }
+.ck-riepilogo-name { font-weight:700; font-size:.95rem; margin:0 0 3px; }
+.ck-riepilogo-vals { font-size:.82rem; color:#78716c; margin:0 0 2px; font-weight:600; }
+.ck-riepilogo-note { font-size:.78rem; color:#78716c; font-style:italic; margin:0; }
