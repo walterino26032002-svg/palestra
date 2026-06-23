@@ -95,7 +95,7 @@ router.get('/nfc', (req, res) => {
         </form>` : ''}
       </div>
     </div>`;
-  }).join('') || `<div class="empty-state"><h3>Nessuna tessera</h3><p class="muted">Assegna la prima tessera con "Nuova tessera".</p></div>`;
+  }).join('') || `<div class="empty-state"><h3>Nessuna tessera</h3><p class="muted">Usa "Associa tessera" per aggiungere la prima.</p></div>`;
 
   const body = `
     <header class="page-head">
@@ -104,7 +104,7 @@ router.get('/nfc', (req, res) => {
         <h1>Tessere NFC</h1>
         <div class="toolbar">
           <a class="btn" href="/admin/nfc/simulatore">Segna ingresso</a>
-          <a class="btn btn-primary" href="/admin/nfc/nuova">+ Nuova tessera</a>
+          <a class="btn btn-primary" href="/admin/nfc/nuova">+ Associa tessera</a>
         </div>
       </div>
       <p class="muted">Associazione tessera ↔ cliente. Una tessera disattivata non sblocca il check-in.</p>
