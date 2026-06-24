@@ -41,7 +41,11 @@
     var nome = c.nome || '';
 
     var saldoHtml;
-    if (sal == null) {
+    if (data.mensile_attivo) {
+      var mFine = data.mensile_attivo.data_fine ? data.mensile_attivo.data_fine.substring(0, 10).split('-').reverse().join('/') : '';
+      saldoHtml = '<span class="ck-badge ck-badge--ok">Abbonamento mensile attivo</span>';
+      if (mFine) saldoHtml += '<span class="ck-big-unit"> fino al ' + esc(mFine) + '</span>';
+    } else if (sal == null) {
       saldoHtml = '<span class="ck-muted">—</span>';
     } else if (sal > 0) {
       saldoHtml = '<span class="ck-big-num">'+esc(sal)+'</span><span class="ck-big-unit"> ingressi disponibili</span>';
@@ -141,6 +145,7 @@
       var params = [
         ex.serie != null ? esc(ex.serie)+' serie' : '',
         ex.ripetizioni ? esc(ex.ripetizioni)+' reps' : '',
+        ex.rpe         ? 'RPE '+esc(ex.rpe)         : '',
         ex.carico       ? esc(ex.carico)             : '',
         ex.recupero     ? 'rec '+esc(ex.recupero)    : '',
       ].filter(Boolean);
@@ -163,6 +168,7 @@
       var params = [
         ex.serie != null ? esc(ex.serie)+' serie' : '',
         ex.ripetizioni ? esc(ex.ripetizioni)+' reps' : '',
+        ex.rpe         ? 'RPE '+esc(ex.rpe)         : '',
         ex.carico       ? esc(ex.carico)             : '',
         ex.recupero     ? 'rec '+esc(ex.recupero)    : '',
       ].filter(Boolean).join(' &middot; ');

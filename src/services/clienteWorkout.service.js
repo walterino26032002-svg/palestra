@@ -6,6 +6,7 @@ const seduteService = require('./sedute.service');
 const eserciziService = require('./esercizi.service');
 const clientiService = require('./clienti.service');
 const movimentiService = require('./movimenti.service');
+const abbonamenti = require('./abbonamenti.service');
 const {
   listFeedbackEserciziSeduta: listFeedbackForSeduta,
   getFeedbackSeduta,
@@ -24,6 +25,7 @@ function getClienteContext(clienteId) {
   const prossima = seduteService.getProssimaSedutaCliente(clienteId);
   const saldo = movimentiService.getSaldo(clienteId);
   const badge = movimentiService.getBadge({ cliente, saldo });
+  const mensile = abbonamenti.getAbbonamentoMensileAttivoOggi(clienteId);
   return {
     cliente,
     saldo_ingressi: saldo,
@@ -33,6 +35,7 @@ function getClienteContext(clienteId) {
     presenza_oggi: presenza,
     prossima_seduta: prossima,
     allenamento_sbloccato: !!(presenza && prossima),
+    mensile_attivo: mensile ? { data_fine: mensile.data_fine, tipo_nome: mensile.tipo_nome } : null,
   };
 }
 

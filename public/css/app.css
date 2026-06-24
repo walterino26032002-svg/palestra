@@ -778,6 +778,7 @@ code {
 /* badge */
 .ck-badge         { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
 .ck-badge--danger { background:#f5e5e4; color:#9b3a35; }
+.ck-badge--ok     { background:var(--ok); color:#fff; }
 
 /* card */
 .ck-card { background:#fff; border:1px solid #e2dbd2; border-radius:18px; padding:20px; }

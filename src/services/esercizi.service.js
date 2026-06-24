@@ -9,7 +9,7 @@ const { getDb } = require('../db/connection');
 function listEserciziSeduta(sedutaId) {
   const db = getDb();
   return db.prepare(`
-    SELECT id, seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, note
+    SELECT id, seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, rpe, note
     FROM esercizi
     WHERE seduta_id = ?
     ORDER BY ordine ASC, id ASC
@@ -19,7 +19,7 @@ function listEserciziSeduta(sedutaId) {
 function getEsercizio(id) {
   const db = getDb();
   return db.prepare(`
-    SELECT id, seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, note
+    SELECT id, seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, rpe, note
     FROM esercizi WHERE id = ?
   `).get(id) || null;
 }
@@ -30,7 +30,7 @@ function nextOrdine(sedutaId) {
   return (row ? row.m : 0) + 10;
 }
 
-function addEsercizio({ sedutaId, nome, serie, ripetizioni, carico, recupero, note, ordine }) {
+function addEsercizio({ sedutaId, nome, serie, ripetizioni, carico, recupero, rpe, note, ordine }) {
   if (!sedutaId) {
     const e = new Error('Seduta obbligatoria'); e.code = 'validation'; throw e;
   }
@@ -48,8 +48,8 @@ function addEsercizio({ sedutaId, nome, serie, ripetizioni, carico, recupero, no
     : Math.max(0, parseInt(serie, 10));
 
   const info = db.prepare(`
-    INSERT INTO esercizi (seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO esercizi (seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, rpe, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     sedutaId,
     ord,
@@ -58,12 +58,13 @@ function addEsercizio({ sedutaId, nome, serie, ripetizioni, carico, recupero, no
     ripetizioni ? String(ripetizioni).trim() : null,
     carico ? String(carico).trim() : null,
     recupero ? String(recupero).trim() : null,
+    rpe ? String(rpe).trim() : null,
     note ? String(note).trim() : null
   );
   return info.lastInsertRowid;
 }
 
-function updateEsercizio(id, { nome, serie, ripetizioni, carico, recupero, note, ordine }) {
+function updateEsercizio(id, { nome, serie, ripetizioni, carico, recupero, rpe, note, ordine }) {
   const db = getDb();
   const existing = db.prepare('SELECT id FROM esercizi WHERE id = ?').get(id);
   if (!existing) {
@@ -76,6 +77,7 @@ function updateEsercizio(id, { nome, serie, ripetizioni, carico, recupero, note,
            ripetizioni = ?,
            carico      = ?,
            recupero    = ?,
+           rpe         = ?,
            note        = ?,
            ordine      = COALESCE(?, ordine)
      WHERE id = ?
@@ -85,6 +87,7 @@ function updateEsercizio(id, { nome, serie, ripetizioni, carico, recupero, note,
     ripetizioni ?? null,
     carico ?? null,
     recupero ?? null,
+    rpe === undefined ? null : (rpe === '' ? null : String(rpe).trim()),
     note ?? null,
     ordine === undefined ? null : parseInt(ordine, 10),
     id
@@ -101,7 +104,6 @@ function deleteEsercizio(id) {
 /**
  * Riordina gli esercizi di una seduta.
  * Input: array di id nell'ordine desiderato.
- * Esempio: { sedutaId: 5, ordineIds: [12, 9, 14] }
  */
 function reorderEsercizi({ sedutaId, ordineIds }) {
   if (!sedutaId || !Array.isArray(ordineIds)) {

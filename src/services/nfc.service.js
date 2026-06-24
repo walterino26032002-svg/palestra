@@ -9,6 +9,11 @@
 
 const { getDb } = require('../db/connection');
 
+/** Normalizza UID: trim + uppercase. Coerente con elaboraCheckin. */
+function normalizeUid(uid) {
+  return String(uid || '').trim().toUpperCase();
+}
+
 function listTessere({ soloAttive = false, q = '' } = {}) {
   const db = getDb();
   const where = [];
@@ -51,7 +56,7 @@ function findByUid(uid) {
     FROM nfc_tessere t
     LEFT JOIN clienti c ON c.id = t.cliente_id
     WHERE t.tessera_uid = ?
-  `).get(uid);
+  `).get(normalizeUid(uid));
 }
 
 function tesseraAssegnata(uid) {
@@ -72,7 +77,7 @@ function creaOAssegna({ tesseraUid, clienteId }) {
   if (!clienteId) {
     const e = new Error('Cliente obbligatorio'); e.code = 'validation'; throw e;
   }
-  const uid = String(tesseraUid).trim();
+  const uid = normalizeUid(tesseraUid);
   const db = getDb();
 
   const cliente = db.prepare('SELECT id FROM clienti WHERE id = ?').get(clienteId);
@@ -118,14 +123,21 @@ function creaOAssegna({ tesseraUid, clienteId }) {
   return tx();
 }
 
+/**
+ * Elimina definitivamente una tessera da nfc_tessere.
+ * Chiude lo storico aperto (se presente) ma NON tocca nfc_eventi,
+ * presenze, movimenti_ingressi o altri dati del cliente.
+ * La stessa tessera potrà essere registrata di nuovo in futuro.
+ */
 function disassocia(id) {
   const db = getDb();
   const row = db.prepare('SELECT id, tessera_uid, cliente_id FROM nfc_tessere WHERE id = ?').get(id);
   if (!row) { const e = new Error('Tessera non trovata'); e.code = 'not_found'; throw e; }
-  if (!row.cliente_id) { const e = new Error('Tessera non assegnata'); e.code = 'validation'; throw e; }
   db.transaction(() => {
-    db.prepare(`UPDATE storico_nfc SET rimossa_il = datetime('now') WHERE tessera_uid = ? AND cliente_id = ? AND rimossa_il IS NULL`).run(row.tessera_uid, row.cliente_id);
-    db.prepare(`UPDATE nfc_tessere SET cliente_id = NULL, assegnata_il = NULL WHERE id = ?`).run(id);
+    if (row.cliente_id) {
+      db.prepare(`UPDATE storico_nfc SET rimossa_il = datetime('now') WHERE tessera_uid = ? AND cliente_id = ? AND rimossa_il IS NULL`).run(row.tessera_uid, row.cliente_id);
+    }
+    db.prepare('DELETE FROM nfc_tessere WHERE id = ?').run(id);
   })();
 }
 

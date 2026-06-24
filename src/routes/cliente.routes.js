@@ -128,6 +128,7 @@ router.get('/cliente/api/me', (req, res) => {
       prossima_seduta: ctx.prossima_seduta,
       allenamento_sbloccato: ctx.allenamento_sbloccato,
       presenza_oggi: ctx.presenza_oggi,
+      mensile_attivo: ctx.mensile_attivo,
       today: clienteWorkoutService.todayISO(),
     });
   } catch (err) {

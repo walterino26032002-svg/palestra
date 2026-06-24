@@ -19,7 +19,8 @@ function listPagamentiCliente(clienteId, { limit = 100 } = {}) {
   const db = getDb();
   return db.prepare(`
     SELECT p.id, p.cliente_id, p.servizio_id, p.importo_cent, p.metodo, p.note, p.pagato_il,
-           p.admin_id, s.nome AS servizio_nome, s.ingressi AS servizio_ingressi
+           p.admin_id, p.stato_pagamento,
+           s.nome AS servizio_nome, s.ingressi AS servizio_ingressi, s.modalita AS servizio_modalita
     FROM pagamenti p
     LEFT JOIN servizi s ON s.id = p.servizio_id
     WHERE p.cliente_id = ?
@@ -31,7 +32,8 @@ function listPagamentiCliente(clienteId, { limit = 100 } = {}) {
 function getPagamento(id) {
   const db = getDb();
   return db.prepare(`
-    SELECT p.id, p.cliente_id, p.servizio_id, p.importo_cent, p.metodo, p.note, p.pagato_il, p.admin_id,
+    SELECT p.id, p.cliente_id, p.servizio_id, p.importo_cent, p.metodo, p.note, p.pagato_il,
+           p.admin_id, p.stato_pagamento,
            s.nome AS servizio_nome
     FROM pagamenti p
     LEFT JOIN servizi s ON s.id = p.servizio_id
@@ -40,18 +42,19 @@ function getPagamento(id) {
 }
 
 /**
- * Registra pagamento + crea movimento ingressi positivo.
+ * Registra pagamento + crea movimento ingressi positivo (solo per servizi INGRESSI).
  *
  * @param {object} p
  * @param {number} p.clienteId
  * @param {number} p.servizioId
- * @param {number} [p.importoCent] - default = servizio.prezzo_cent
+ * @param {number} [p.importoCent]
  * @param {string} [p.metodo]
  * @param {string} [p.note]
  * @param {number} [p.adminId]
+ * @param {string} [p.statoPagamento] - 'PAGATO' | 'DA_SALDARE'
  * @returns {object} { pagamentoId, movimentoId, ingressi, nuovoSaldo }
  */
-function registraPagamento({ clienteId, servizioId, importoCent, metodo, note, adminId = null }) {
+function registraPagamento({ clienteId, servizioId, importoCent, metodo, note, adminId = null, statoPagamento = 'PAGATO' }) {
   if (!clienteId || !servizioId) {
     const e = new Error('Cliente e servizio obbligatori'); e.code = 'validation'; throw e;
   }
@@ -68,15 +71,19 @@ function registraPagamento({ clienteId, servizioId, importoCent, metodo, note, a
     ? parseInt(importoCent, 10)
     : servizio.prezzo_cent;
 
+  const stato = statoPagamento === 'DA_SALDARE' ? 'DA_SALDARE' : 'PAGATO';
+
   const db = getDb();
   const tx = db.transaction(() => {
     const p = db.prepare(`
-      INSERT INTO pagamenti (cliente_id, servizio_id, importo_cent, metodo, note, admin_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(clienteId, servizioId, importo, metodo || null, note || null, adminId);
+      INSERT INTO pagamenti (cliente_id, servizio_id, importo_cent, metodo, note, admin_id, stato_pagamento)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(clienteId, servizioId, importo, metodo || null, note || null, adminId, stato);
     const pagamentoId = p.lastInsertRowid;
 
-    const delta = servizio.ingressi > 0 ? servizio.ingressi : 0;
+    // Solo i servizi INGRESSI creano movimenti; i MENSILI no.
+    const isMensile = servizio.modalita === 'MENSILE';
+    const delta = (!isMensile && servizio.ingressi > 0) ? servizio.ingressi : 0;
     if (delta > 0) {
       const m = db.prepare(`
         INSERT INTO movimenti_ingressi (cliente_id, delta, motivo, riferimento_id, admin_id, creato_il)
@@ -92,8 +99,23 @@ function registraPagamento({ clienteId, servizioId, importoCent, metodo, note, a
   return { ...result, nuovoSaldo };
 }
 
+/**
+ * Segna un pagamento come PAGATO (da DA_SALDARE).
+ * Non modifica ingressi né saldo.
+ */
+function markAsPagato(id) {
+  const db = getDb();
+  const row = db.prepare('SELECT id FROM pagamenti WHERE id = ?').get(id);
+  if (!row) {
+    const e = new Error('Pagamento non trovato'); e.code = 'not_found'; throw e;
+  }
+  db.prepare(`UPDATE pagamenti SET stato_pagamento = 'PAGATO' WHERE id = ?`).run(id);
+  return true;
+}
+
 module.exports = {
   listPagamentiCliente,
   getPagamento,
   registraPagamento,
+  markAsPagato,
 };

@@ -326,6 +326,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
       <td><input name="ripetizioni" value="${escapeHtml(ex.ripetizioni || '')}" style="width:80px"></td>
       <td><input name="carico" value="${escapeHtml(ex.carico || '')}" style="width:90px"></td>
       <td><input name="recupero" value="${escapeHtml(ex.recupero || '')}" style="width:80px"></td>
+      <td><input name="rpe" value="${escapeHtml(ex.rpe || '')}" style="width:60px" placeholder="es. 8"></td>
       <td><input name="note" value="${escapeHtml(ex.note || '')}"></td>
       <td class="nowrap">
         <div>
@@ -369,7 +370,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
     <div class="card" style="overflow-x:auto">
       <table class="table excel-table" id="eserciziTable">
         <thead><tr>
-          <th>Nome</th><th>Serie</th><th>Reps</th><th>Carico</th><th>Recupero</th><th>Note</th><th>Azioni</th>
+          <th>Nome</th><th>Serie</th><th>Reps</th><th>Carico</th><th>Recupero</th><th>RPE</th><th>Note</th><th>Azioni</th>
         </tr></thead>
         <tbody>${esRows}</tbody>
       </table>
@@ -382,6 +383,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
       <label>Reps <input name="ripetizioni" placeholder="8-10"></label>
       <label>Carico <input name="carico" placeholder="60kg"></label>
       <label>Recupero <input name="recupero" placeholder="90s"></label>
+      <label>RPE <input name="rpe" placeholder="es. 8"></label>
       <label>Note <input name="note"></label>
       <button type="submit" class="btn btn-primary">Aggiungi</button>
     </form>
@@ -427,6 +429,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
           const out = {};
           inputs.forEach((i) => out[i.name] = i.value);
           out.serie = out.serie === '' ? null : parseInt(out.serie, 10);
+          out.rpe = out.rpe === '' ? null : out.rpe;
           return out;
         }
 
@@ -528,10 +531,10 @@ router.post('/sedute/:id(\\d+)/prossima', (req, res) => {
 // =====================================================================
 router.post('/sedute/:id(\\d+)/esercizi', express.urlencoded({ extended: false }), (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { nome, serie, ripetizioni, carico, recupero, note } = req.body || {};
+  const { nome, serie, ripetizioni, carico, recupero, rpe, note } = req.body || {};
   try {
     const newId = eserciziService.addEsercizio({
-      sedutaId: id, nome, serie, ripetizioni, carico, recupero, note,
+      sedutaId: id, nome, serie, ripetizioni, carico, recupero, rpe, note,
     });
     return backWithMsg(res, `/admin/sedute/${id}`, `Esercizio #${newId} aggiunto.`, 'ok');
   } catch (e) {

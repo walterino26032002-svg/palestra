@@ -149,6 +149,7 @@ router.get('/clienti/:id(\\d+)/scheda/stampa', (req, res) => {
             <th class="pw-col-name">Esercizio</th>
             <th class="pw-col-sm">Serie</th>
             <th class="pw-col-sm">Reps</th>
+            <th class="pw-col-sm">RPE</th>
             <th class="pw-col-md">Carico previsto</th>
             <th class="pw-col-sm">Rec.</th>
             <th class="pw-col-note">Note coach</th>
@@ -165,6 +166,7 @@ router.get('/clienti/:id(\\d+)/scheda/stampa', (req, res) => {
             <td class="pw-col-name"><strong>${esc(ex.nome)}</strong></td>
             <td class="pw-col-sm pw-center">${esc(ex.serie ?? '')}</td>
             <td class="pw-col-sm pw-center">${esc(ex.ripetizioni ?? '')}</td>
+            <td class="pw-col-sm pw-center">${esc(ex.rpe ?? '')}</td>
             <td class="pw-col-md">${esc(ex.carico ?? '')}</td>
             <td class="pw-col-sm pw-center">${esc(ex.recupero ?? '')}</td>
             <td class="pw-col-note pw-small">${esc(ex.note ?? '')}</td>
@@ -172,7 +174,7 @@ router.get('/clienti/:id(\\d+)/scheda/stampa', (req, res) => {
             <td class="pw-col-fill pw-writeable"></td>
             <td class="pw-col-sm pw-writeable"></td>
             <td class="pw-col-note pw-writeable"></td>
-          </tr>`).join('') : '<tr><td colspan="11" style="color:#999;text-align:center;padding:10px">Nessun esercizio.</td></tr>'}
+          </tr>`).join('') : '<tr><td colspan="12" style="color:#999;text-align:center;padding:10px">Nessun esercizio.</td></tr>'}
         </tbody>
       </table>
     </section>`;
@@ -259,6 +261,7 @@ router.get('/sedute/:id(\\d+)/stampa', (req, res) => {
   const tableHtml = `<section class="pw-session"><table class="pw-table"><thead><tr>
     <th class="pw-col-num">#</th><th class="pw-col-name">Esercizio</th>
     <th class="pw-col-sm">Serie</th><th class="pw-col-sm">Reps</th>
+    <th class="pw-col-sm">RPE</th>
     <th class="pw-col-md">Carico previsto</th><th class="pw-col-sm">Rec.</th>
     <th class="pw-col-note">Note coach</th><th class="pw-col-fill">Carico usato</th>
     <th class="pw-col-fill">Reps fatte</th><th class="pw-col-sm">RIR/RPE</th>
@@ -268,12 +271,13 @@ router.get('/sedute/:id(\\d+)/stampa', (req, res) => {
     <td class="pw-col-name"><strong>${esc(ex.nome)}</strong></td>
     <td class="pw-col-sm pw-center">${esc(ex.serie??'')}</td>
     <td class="pw-col-sm pw-center">${esc(ex.ripetizioni??'')}</td>
+    <td class="pw-col-sm pw-center">${esc(ex.rpe??'')}</td>
     <td class="pw-col-md">${esc(ex.carico??'')}</td>
     <td class="pw-col-sm pw-center">${esc(ex.recupero??'')}</td>
     <td class="pw-col-note pw-small">${esc(ex.note??'')}</td>
     <td class="pw-col-fill pw-writeable"></td><td class="pw-col-fill pw-writeable"></td>
     <td class="pw-col-sm pw-writeable"></td><td class="pw-col-note pw-writeable"></td>
-  </tr>`).join('') : '<tr><td colspan="11" style="text-align:center;color:#999;padding:10px">Nessun esercizio.</td></tr>'}
+  </tr>`).join('') : '<tr><td colspan="12" style="text-align:center;color:#999;padding:10px">Nessun esercizio.</td></tr>'}
   </tbody></table></section>`;
 
   res.setHeader('Content-Type','text/html; charset=utf-8');

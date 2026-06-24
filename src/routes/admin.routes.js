@@ -17,6 +17,7 @@ const serviziService = require('../services/servizi.service');
 const pagamentiService = require('../services/pagamenti.service');
 const movimentiService = require('../services/movimenti.service');
 const schedeService = require('../services/schede.service');
+const abbonamenti = require('../services/abbonamenti.service');
 
 const router = express.Router();
 
@@ -263,6 +264,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
   const movimenti = movimentiService.getMovimenti(id, { limit: 50 });
   const servizi = serviziService.listServizi({ soloAttivi: true });
   const schedaRiepilogo = schedeService.riepilogoCliente(id);
+  const mensiliCliente = abbonamenti.listAbbonamenti(id);
 
   const pagRows = pagamenti.map((p) => `
     <tr>
@@ -271,8 +273,23 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       <td class="col-right num">${p.servizio_ingressi ?? '—'}</td>
       <td class="col-right num">${fmtEurFromCent(p.importo_cent)}</td>
       <td>${escapeHtml(p.metodo || '—')}</td>
+      <td>${p.stato_pagamento === 'DA_SALDARE'
+        ? `<span class="badge badge-warn">Da saldare</span>&nbsp;<form method="POST" action="/admin/pagamenti/${p.id}/pagato" style="display:inline"><button type="submit" class="btn btn-ghost small">Segna come pagato</button></form>`
+        : '<span class="badge badge-ok">Pagato</span>'}</td>
     </tr>
-  `).join('') || `<tr><td colspan="5" class="muted">Nessun pagamento registrato.</td></tr>`;
+  `).join('') || `<tr><td colspan="6" class="muted">Nessun pagamento registrato.</td></tr>`;
+
+  const fmtData = (v) => v ? String(v).substring(0, 10).split('-').reverse().join('/') : '—';
+  const mensileRows = mensiliCliente.map((m) => `
+    <tr>
+      <td>${escapeHtml(m.tipo_nome || '—')}</td>
+      <td>${fmtData(m.data_inizio)}</td>
+      <td>${fmtData(m.data_fine)}</td>
+      <td>${m.stato_pagamento === 'DA_SALDARE'
+        ? `<span class="badge badge-warn">Da saldare</span>&nbsp;<form method="POST" action="/admin/abbonamenti-mensili/${m.id}/pagato" style="display:inline"><button type="submit" class="btn btn-ghost small">Segna come pagato</button></form>`
+        : '<span class="badge badge-ok">Pagato</span>'}</td>
+    </tr>
+  `).join('') || `<tr><td colspan="4" class="muted">Nessun abbonamento mensile.</td></tr>`;
 
   const movRows = movimenti.map((m) => `
     <tr>
@@ -283,7 +300,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
   `).join('') || `<tr><td colspan="3" class="muted">Nessun movimento ingressi.</td></tr>`;
 
   const serviziOptions = servizi.map((s) =>
-    `<option value="${s.id}">${escapeHtml(s.nome)} — ${s.ingressi} ingr. (${fmtEurFromCent(s.prezzo_cent)})</option>`
+    `<option value="${s.id}" data-modalita="${s.modalita || 'INGRESSI'}">${escapeHtml(s.nome)} — ${s.modalita === 'MENSILE' ? 'Mensile' : s.ingressi + ' ingr.'} (${fmtEurFromCent(s.prezzo_cent)})</option>`
   ).join('');
 
   const statoBadge = cliente.attivo
@@ -381,27 +398,67 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     </section>
 
     <section class="section-gap">
-      <h2>Registra pagamento</h2>
-      <form method="POST" action="/admin/clienti/${cliente.id}/pagamenti" class="card form-inline">
+      <h2>Registra pagamento / Abbonamento</h2>
+      <form method="POST" action="/admin/clienti/${cliente.id}/pagamenti" class="card form-inline" id="frmPagamento">
         <label>Servizio
-          <select name="servizio_id" required>
+          <select name="servizio_id" id="srvSelect" required>
             <option value="">— seleziona —</option>
             ${serviziOptions}
           </select>
         </label>
-        <label>Importo (cent) <input name="importo_cent" type="number" min="0" placeholder="listino"></label>
+        <span class="ingressi-fields">
+          <label>Importo (cent) <input name="importo_cent" type="number" min="0" placeholder="listino"></label>
+        </span>
+        <span class="mensile-fields" style="display:none">
+          <label>Data inizio <input name="data_inizio" type="date"></label>
+          <label>Data fine <input name="data_fine" type="date"></label>
+        </span>
+        <label>Stato pagamento
+          <select name="stato_pagamento">
+            <option value="PAGATO" selected>Pagato</option>
+            <option value="DA_SALDARE">Da saldare</option>
+          </select>
+        </label>
         <label>Metodo <input name="metodo" placeholder="contanti, bonifico..."></label>
         <label>Note <input name="note"></label>
-        <button type="submit" class="btn btn-primary">Registra pagamento</button>
+        <button type="submit" class="btn btn-primary">Registra</button>
       </form>
+      <script>
+        (function () {
+          var sel = document.getElementById('srvSelect');
+          var iF = document.querySelector('.ingressi-fields');
+          var mF = document.querySelector('.mensile-fields');
+          var frm = document.getElementById('frmPagamento');
+          function toggle() {
+            var opt = sel.options[sel.selectedIndex];
+            var isMensile = opt && opt.getAttribute('data-modalita') === 'MENSILE';
+            iF.style.display = isMensile ? 'none' : '';
+            mF.style.display = isMensile ? '' : 'none';
+            frm.action = isMensile
+              ? '/admin/clienti/${cliente.id}/abbonamenti-mensili'
+              : '/admin/clienti/${cliente.id}/pagamenti';
+          }
+          if (sel) sel.addEventListener('change', toggle);
+        })();
+      </script>
     </section>
 
     <details class="section-gap">
       <summary style="cursor:pointer;font-weight:600;padding:10px 0">Storico pagamenti</summary>
       <div class="table-wrap" style="margin-top:10px">
         <table class="table">
-          <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th></tr></thead>
+          <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th><th>Stato</th></tr></thead>
           <tbody>${pagRows}</tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Abbonamenti mensili</summary>
+      <div class="table-wrap" style="margin-top:10px">
+        <table class="table">
+          <thead><tr><th>Tipo</th><th>Dal</th><th>Al</th><th>Stato</th></tr></thead>
+          <tbody>${mensileRows}</tbody>
         </table>
       </div>
     </details>
@@ -494,7 +551,7 @@ router.post('/clienti/:id(\\d+)/toggle-attivo', (req, res) => {
 // Registra pagamento per un cliente
 router.post('/clienti/:id(\\d+)/pagamenti', express.urlencoded({ extended: false }), (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { servizio_id, importo_cent, metodo, note } = req.body || {};
+  const { servizio_id, importo_cent, metodo, note, stato_pagamento } = req.body || {};
   try {
     const result = pagamentiService.registraPagamento({
       clienteId: id,
@@ -503,6 +560,7 @@ router.post('/clienti/:id(\\d+)/pagamenti', express.urlencoded({ extended: false
       metodo,
       note,
       adminId: req.admin && req.admin.id ? req.admin.id : null,
+      statoPagamento: stato_pagamento || 'PAGATO',
     });
     const msg = `Pagamento registrato. Ingressi aggiunti: ${result.ingressi}. Nuovo saldo: ${result.nuovoSaldo}.`;
     return backWithMsg(res, `/admin/clienti/${id}`, msg, 'ok');
@@ -510,6 +568,54 @@ router.post('/clienti/:id(\\d+)/pagamenti', express.urlencoded({ extended: false
     console.error(e);
     const msg = e.message || 'Errore registrazione pagamento.';
     return backWithMsg(res, `/admin/clienti/${id}`, msg, 'err');
+  }
+});
+
+// Crea abbonamento mensile per un cliente
+router.post('/clienti/:id(\\d+)/abbonamenti-mensili', express.urlencoded({ extended: false }), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { servizio_id, data_inizio, data_fine, stato_pagamento, metodo, note } = req.body || {};
+  try {
+    abbonamenti.creaAbbonamento({
+      clienteId: id,
+      tipoAbbonamentoId: servizio_id ? parseInt(servizio_id, 10) : null,
+      dataInizio: data_inizio,
+      dataFine: data_fine,
+      statoPagamento: stato_pagamento || 'PAGATO',
+      note,
+      adminId: req.admin && req.admin.id ? req.admin.id : null,
+    });
+    return backWithMsg(res, `/admin/clienti/${id}`, 'Abbonamento mensile registrato.', 'ok');
+  } catch (e) {
+    console.error(e);
+    return backWithMsg(res, `/admin/clienti/${id}`, e.message || 'Errore.', 'err');
+  }
+});
+
+// Segna pagamento ingressi come pagato
+router.post('/pagamenti/:id(\\d+)/pagato', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    const pag = pagamentiService.getPagamento(id);
+    pagamentiService.markAsPagato(id);
+    return backWithMsg(res, `/admin/clienti/${pag ? pag.cliente_id : ''}`, 'Stato aggiornato a Pagato.', 'ok');
+  } catch (e) {
+    console.error(e);
+    return backWithMsg(res, '/admin/clienti', e.message || 'Errore.', 'err');
+  }
+});
+
+// Segna abbonamento mensile come pagato
+router.post('/abbonamenti-mensili/:id(\\d+)/pagato', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  try {
+    const db = getDb();
+    const row = db.prepare('SELECT cliente_id FROM abbonamenti_mensili_cliente WHERE id = ?').get(id);
+    abbonamenti.markAsPagato(id);
+    return backWithMsg(res, `/admin/clienti/${row ? row.cliente_id : ''}`, 'Stato aggiornato a Pagato.', 'ok');
+  } catch (e) {
+    console.error(e);
+    return backWithMsg(res, '/admin/clienti', e.message || 'Errore.', 'err');
   }
 });
 
@@ -546,7 +652,11 @@ router.get('/servizi', (req, res) => {
         <form method="POST" action="/admin/servizi/${s.id}" class="svc-edit" data-cents>
           <input name="nome" value="${escapeHtml(s.nome)}" required aria-label="Nome">
           <input name="descrizione" value="${escapeHtml(s.descrizione || '')}" placeholder="—" aria-label="Descrizione">
-          <input name="ingressi" type="number" min="0" value="${s.ingressi}" class="w-narrow" aria-label="Ingressi">
+          <select name="modalita" aria-label="Modalità">
+            <option value="INGRESSI" ${(s.modalita || 'INGRESSI') === 'INGRESSI' ? 'selected' : ''}>A ingressi</option>
+            <option value="MENSILE" ${s.modalita === 'MENSILE' ? 'selected' : ''}>Mensile</option>
+          </select>
+          <input name="ingressi" type="number" min="0" value="${s.ingressi}" class="w-narrow" aria-label="Ingressi" ${s.modalita === 'MENSILE' ? 'style="display:none"' : ''}>
           <input type="number" min="0" step="0.01" value="${(Number(s.prezzo_cent || 0) / 100).toFixed(2)}" class="w-price js-eur" aria-label="Prezzo in euro">
           <input type="hidden" name="prezzo_cent" value="${s.prezzo_cent}" class="js-cent">
           <button type="submit" class="btn small">Salva</button>
@@ -605,7 +715,13 @@ router.get('/servizi', (req, res) => {
         <div class="cb-grid">
           <label class="field">Nome <input name="nome" placeholder="es. Abbonamento 10 ingressi" required></label>
           <label class="field">Descrizione <input name="descrizione" placeholder="opzionale"></label>
-          <label class="field">Ingressi <input name="ingressi" type="number" min="0" value="1" required></label>
+          <label class="field">Modalità
+            <select name="modalita" id="newSrvModalita">
+              <option value="INGRESSI" selected>A ingressi</option>
+              <option value="MENSILE">Mensile</option>
+            </select>
+          </label>
+          <label class="field" id="newSrvIngressiField">Ingressi <input name="ingressi" type="number" min="0" value="1" required></label>
           <label class="field">Prezzo (€) <input type="number" min="0" step="0.01" value="0.00" class="js-eur" required></label>
           <label class="field">Stato
             <select name="attivo">
@@ -632,7 +748,6 @@ router.get('/servizi', (req, res) => {
     <div class="card-list">${cards}</div>
 
     <script>
-      // Converte il prezzo in euro (visibile) nel campo nascosto in centesimi prima dell'invio.
       document.querySelectorAll('form[data-cents]').forEach(function (form) {
         form.addEventListener('submit', function () {
           var eur = form.querySelector('.js-eur');
@@ -643,6 +758,14 @@ router.get('/servizi', (req, res) => {
           }
         });
       });
+      // Toggle ingressi field based on modalita in the create form
+      var newMod = document.getElementById('newSrvModalita');
+      var newIngField = document.getElementById('newSrvIngressiField');
+      if (newMod && newIngField) {
+        newMod.addEventListener('change', function () {
+          newIngField.style.display = newMod.value === 'MENSILE' ? 'none' : '';
+        });
+      }
     </script>
   `;
 
@@ -659,14 +782,15 @@ router.get('/servizi', (req, res) => {
 
 // Crea servizio
 router.post('/servizi', express.urlencoded({ extended: false }), (req, res) => {
-  const { nome, descrizione, ingressi, prezzo_cent, attivo } = req.body || {};
+  const { nome, descrizione, ingressi, prezzo_cent, attivo, modalita } = req.body || {};
   try {
     const id = serviziService.createServizio({
       nome,
       descrizione,
-      ingressi: parseInt(ingressi, 10),
+      ingressi: parseInt(ingressi, 10) || 0,
       prezzoCent: parseInt(prezzo_cent, 10),
       attivo: attivo === '0' ? 0 : 1,
+      modalita: modalita || 'INGRESSI',
     });
     return backWithMsg(res, '/admin/servizi', `Servizio creato (#${id}).`, 'ok');
   } catch (e) {
@@ -679,7 +803,7 @@ router.post('/servizi', express.urlencoded({ extended: false }), (req, res) => {
 // Modifica servizio
 router.post('/servizi/:id(\\d+)', express.urlencoded({ extended: false }), (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { nome, descrizione, ingressi, prezzo_cent, attivo } = req.body || {};
+  const { nome, descrizione, ingressi, prezzo_cent, attivo, modalita } = req.body || {};
   try {
     serviziService.updateServizio(id, {
       nome,
@@ -687,6 +811,7 @@ router.post('/servizi/:id(\\d+)', express.urlencoded({ extended: false }), (req,
       ingressi: ingressi === undefined ? undefined : parseInt(ingressi, 10),
       prezzoCent: prezzo_cent === undefined ? undefined : parseInt(prezzo_cent, 10),
       attivo: attivo === undefined ? undefined : (attivo === '1' ? 1 : 0),
+      modalita: modalita || undefined,
     });
     return backWithMsg(res, '/admin/servizi', 'Servizio aggiornato.', 'ok');
   } catch (e) {
