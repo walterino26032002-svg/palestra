@@ -18,6 +18,7 @@ const pagamentiService = require('../services/pagamenti.service');
 const movimentiService = require('../services/movimenti.service');
 const schedeService = require('../services/schede.service');
 const abbonamenti = require('../services/abbonamenti.service');
+const assicurazioni = require('../services/assicurazioni.service');
 
 const router = express.Router();
 
@@ -134,6 +135,18 @@ router.get('/clienti', (req, res) => {
   const clienti = clientiService.listClienti({ q });
   const attiviCount = clienti.filter((c) => c.attivo).length;
 
+  // Badge pagamenti e assicurazione per lista
+  const db = getDb();
+  const annoC = assicurazioni.currentYear();
+  const setDaSaldare = new Set([
+    ...db.prepare("SELECT DISTINCT cliente_id FROM pagamenti WHERE stato_pagamento='DA_SALDARE'").all().map(r => r.cliente_id),
+    ...db.prepare("SELECT DISTINCT cliente_id FROM abbonamenti_mensili_cliente WHERE stato_pagamento='DA_SALDARE'").all().map(r => r.cliente_id),
+    ...db.prepare("SELECT DISTINCT cliente_id FROM assicurazioni_annuali_cliente WHERE anno=? AND stato_pagamento='DA_SALDARE'").all(annoC).map(r => r.cliente_id),
+  ]);
+  const mapAss = new Map(
+    db.prepare("SELECT cliente_id, stato_pagamento FROM assicurazioni_annuali_cliente WHERE anno=?").all(annoC).map(r => [r.cliente_id, r.stato_pagamento])
+  );
+
   const statoCliente = (c) => c.attivo
     ? '<span class="badge badge-ok">Attivo</span>'
     : '<span class="badge badge-muted">Disattivo</span>';
@@ -143,18 +156,31 @@ router.get('/clienti', (req, res) => {
     return `<span class="num"${neg ? ' style="color:var(--danger)"' : ''}>${c.saldo_ingressi}</span>`;
   };
 
-  const rows = clienti.map((c) => `
+  const rows = clienti.map((c) => {
+    const daSaldare = setDaSaldare.has(c.id);
+    const assStato = mapAss.get(c.id);
+    const assBadge = assStato === 'PAGATO'
+      ? '<span class="badge badge-ok">Assicurazione OK</span>'
+      : assStato === 'DA_SALDARE'
+        ? '<span class="badge badge-warn">Assicurazione da saldare</span>'
+        : '<span class="badge badge-muted">Assicurazione assente</span>';
+    return `
     <tr>
       <td><a href="/admin/clienti/${c.id}"><strong>${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</strong></a></td>
       <td class="muted">${escapeHtml(c.email || '—')}</td>
       <td class="muted">${escapeHtml(c.telefono || '—')}</td>
       <td class="col-right">${saldoCell(c)}</td>
       <td><span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span></td>
+      <td>${daSaldare ? '<span class="badge badge-warn">Da saldare</span>' : '<span class="badge badge-ok">Tutto saldato</span>'}</td>
+      <td>${assBadge}</td>
       <td>${statoCliente(c)}</td>
-    </tr>
-  `).join('') || `<tr><td colspan="6" class="muted">Nessun cliente trovato. Aggiungine uno con "Nuovo cliente".</td></tr>`;
+    </tr>`;
+  }).join('') || `<tr><td colspan="8" class="muted">Nessun cliente trovato. Aggiungine uno con "Nuovo cliente".</td></tr>`;
 
-  const cards = clienti.map((c) => `
+  const cards = clienti.map((c) => {
+    const daSaldare = setDaSaldare.has(c.id);
+    const assStato = mapAss.get(c.id);
+    return `
     <a class="row-card" href="/admin/clienti/${c.id}" style="display:block">
       <div class="rc-top">
         <span class="t">${escapeHtml(c.cognome)} ${escapeHtml(c.nome)}</span>
@@ -163,10 +189,12 @@ router.get('/clienti', (req, res) => {
       <div class="rc-meta">
         <span>Saldo <b>${c.saldo_ingressi}</b></span>
         <span><span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span></span>
+        <span>${daSaldare ? '<span class="badge badge-warn">Da saldare</span>' : '<span class="badge badge-ok">Saldato</span>'}</span>
+        <span>${assStato === 'PAGATO' ? '<span class="badge badge-ok">Ass. OK</span>' : assStato === 'DA_SALDARE' ? '<span class="badge badge-warn">Ass. da saldare</span>' : '<span class="badge badge-muted">Ass. assente</span>'}</span>
       </div>
       ${c.email || c.telefono ? `<div class="rc-meta"><span class="muted small">${escapeHtml(c.email || c.telefono || '')}</span></div>` : ''}
-    </a>
-  `).join('') || `<div class="empty-state"><h3>Nessun cliente</h3><p class="muted">Aggiungine uno con "Nuovo cliente".</p></div>`;
+    </a>`;
+  }).join('') || `<div class="empty-state"><h3>Nessun cliente</h3><p class="muted">Aggiungine uno con "Nuovo cliente".</p></div>`;
 
   const body = `
     <header class="page-head">
@@ -196,7 +224,7 @@ router.get('/clienti', (req, res) => {
       <table class="table">
         <thead><tr>
           <th>Nome</th><th>Email</th><th>Telefono</th>
-          <th class="col-right">Saldo</th><th>Badge</th><th>Stato</th>
+          <th class="col-right">Saldo</th><th>Badge</th><th>Pagamenti</th><th>Assicurazione</th><th>Stato</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -265,6 +293,9 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
   const servizi = serviziService.listServizi({ soloAttivi: true });
   const schedaRiepilogo = schedeService.riepilogoCliente(id);
   const mensiliCliente = abbonamenti.listAbbonamenti(id);
+  const assCorrente = assicurazioni.getAssicurazioneCorrente(id);
+  const annoCorrente = assicurazioni.currentYear();
+  const mensileAttivoOra = abbonamenti.getAbbonamentoMensileAttivoOggi(id);
 
   const pagRows = pagamenti.map((p) => `
     <tr>
@@ -341,6 +372,12 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
         <div style="margin-top:8px">${schedaRiepilogo.ha_scheda
           ? (schedaRiepilogo.prossima_seduta ? '<span class="badge badge-ok">Seduta pronta</span>' : '<span class="badge badge-warn">Nessuna PROSSIMA</span>')
           : '<span class="badge badge-warn">Senza scheda</span>'}</div>
+      </div>
+      <div class="svc-stat">
+        <p class="eyebrow">Abbonamento</p>
+        <div style="margin-top:8px">${mensileAttivoOra
+          ? `<span class="badge badge-ok">Mensile attivo fino al ${mensileAttivoOra.data_fine.split('-').reverse().join('/')}</span>`
+          : '<span class="badge badge-muted">Nessun mensile attivo</span>'}</div>
       </div>
     </section>
 
@@ -463,8 +500,40 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       </div>
     </details>
 
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Movimenti ingressi</summary>
+    <section class="section-gap">
+      <h2>Assicurazione annuale ${annoCorrente}</h2>
+      ${(() => {
+        if (!assCorrente) return `
+          <p class="muted small" style="margin:8px 0">Nessuna assicurazione registrata per il ${annoCorrente}.</p>`;
+        const tone = assCorrente.stato_pagamento === 'PAGATO' ? 'ok' : 'warn';
+        const label = assCorrente.stato_pagamento === 'PAGATO' ? 'Pagata' : 'Da saldare';
+        const fmtD = (v) => v ? String(v).split('-').reverse().join('/') : '—';
+        return `
+          <p style="margin:8px 0">
+            <span class="badge badge-${escapeHtml(tone)}">${label}</span>
+            <span class="muted small" style="margin-left:8px">valida dal ${fmtD(assCorrente.data_inizio)} al ${fmtD(assCorrente.data_fine)}</span>
+            ${assCorrente.note ? `<span class="muted small" style="margin-left:8px">— ${escapeHtml(assCorrente.note)}</span>` : ''}
+          </p>
+          ${assCorrente.stato_pagamento === 'DA_SALDARE' ? `
+          <form method="POST" action="/admin/clienti/${cliente.id}/assicurazione/${assCorrente.id}/pagata" style="display:inline;margin-top:8px">
+            <button type="submit" class="btn btn-ghost small">Segna come pagata</button>
+          </form>` : ''}`;
+      })()}
+      <details style="margin-top:16px">
+        <summary style="cursor:pointer;font-size:13px;padding:4px 0">Registra assicurazione anno corrente</summary>
+        <form method="POST" action="/admin/clienti/${cliente.id}/assicurazione" class="card form-inline" style="margin-top:10px">
+          <label>Anno <input name="anno" type="number" value="${annoCorrente}" min="2020" max="2100" style="width:90px"></label>
+          <label>Stato
+            <select name="stato_pagamento">
+              <option value="PAGATO" selected>Pagata</option>
+              <option value="DA_SALDARE">Da saldare</option>
+            </select>
+          </label>
+          <label>Note <input name="note" placeholder="opzionale"></label>
+          <button type="submit" class="btn btn-primary small">Registra</button>
+        </form>
+      </details>
+    </section>
       <div class="table-wrap" style="margin-top:10px">
         <table class="table">
           <thead><tr><th>Data</th><th class="col-right">Δ</th><th>Motivo</th></tr></thead>
@@ -571,6 +640,31 @@ router.post('/clienti/:id(\\d+)/pagamenti', express.urlencoded({ extended: false
   }
 });
 
+// Registra assicurazione annuale per un cliente
+router.post('/clienti/:id(\\d+)/assicurazione', express.urlencoded({ extended: false }), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { anno, stato_pagamento, note } = req.body || {};
+  try {
+    assicurazioni.creaAssicurazioneAnnuale({ clienteId: id, anno, statoPagamento: stato_pagamento, note });
+    return backWithMsg(res, `/admin/clienti/${id}`, 'Assicurazione registrata.', 'ok');
+  } catch (e) {
+    const msg = e.message || 'Errore registrazione assicurazione.';
+    return backWithMsg(res, `/admin/clienti/${id}`, msg, e.code === 'duplicate' ? 'ok' : 'err');
+  }
+});
+
+// Segna assicurazione come pagata
+router.post('/clienti/:id(\\d+)/assicurazione/:aid(\\d+)/pagata', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const aid = parseInt(req.params.aid, 10);
+  try {
+    assicurazioni.markAsPagata(aid);
+    return backWithMsg(res, `/admin/clienti/${id}`, 'Assicurazione segnata come pagata.', 'ok');
+  } catch (e) {
+    return backWithMsg(res, `/admin/clienti/${id}`, e.message || 'Errore.', 'err');
+  }
+});
+
 // Crea abbonamento mensile per un cliente
 router.post('/clienti/:id(\\d+)/abbonamenti-mensili', express.urlencoded({ extended: false }), (req, res) => {
   const id = parseInt(req.params.id, 10);
@@ -648,25 +742,30 @@ router.get('/servizi', (req, res) => {
   const rows = servizi.map((s) => `
     <tr>
       <td class="muted num">#${s.id}</td>
-      <td>
-        <form method="POST" action="/admin/servizi/${s.id}" class="svc-edit" data-cents>
-          <input name="nome" value="${escapeHtml(s.nome)}" required aria-label="Nome">
-          <input name="descrizione" value="${escapeHtml(s.descrizione || '')}" placeholder="—" aria-label="Descrizione">
-          <select name="modalita" aria-label="Modalità">
-            <option value="INGRESSI" ${(s.modalita || 'INGRESSI') === 'INGRESSI' ? 'selected' : ''}>A ingressi</option>
-            <option value="MENSILE" ${s.modalita === 'MENSILE' ? 'selected' : ''}>Mensile</option>
-          </select>
-          <input name="ingressi" type="number" min="0" value="${s.ingressi}" class="w-narrow" aria-label="Ingressi" ${s.modalita === 'MENSILE' ? 'style="display:none"' : ''}>
-          <input type="number" min="0" step="0.01" value="${(Number(s.prezzo_cent || 0) / 100).toFixed(2)}" class="w-price js-eur" aria-label="Prezzo in euro">
-          <input type="hidden" name="prezzo_cent" value="${s.prezzo_cent}" class="js-cent">
-          <button type="submit" class="btn small">Salva</button>
-        </form>
-      </td>
+      <td><strong>${escapeHtml(s.nome)}</strong></td>
       <td class="hide-mobile">${s.descrizione ? escapeHtml(s.descrizione) : '<span class="muted">—</span>'}</td>
-      <td class="num">${s.ingressi}</td>
+      <td class="hide-mobile">${s.modalita === 'MENSILE' ? 'Mensile' : 'A ingressi'}</td>
+      <td class="num">${s.modalita === 'MENSILE' ? '—' : s.ingressi}</td>
       <td class="num">${fmtEurFromCent(s.prezzo_cent)}</td>
       <td>${s.attivo ? '<span class="badge badge-ok">Attivo</span>' : '<span class="badge badge-muted">Disattivato</span>'}</td>
       <td class="col-right">
+        <details>
+          <summary class="btn btn-ghost small">Modifica</summary>
+          <form method="POST" action="/admin/servizi/${s.id}" class="form-stacked" data-cents style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:6px;text-align:left">
+            <label style="display:block;margin-bottom:8px">Nome <input name="nome" value="${escapeHtml(s.nome)}" required style="display:block;width:100%;margin-top:4px"></label>
+            <label style="display:block;margin-bottom:8px">Descrizione <input name="descrizione" value="${escapeHtml(s.descrizione || '')}" placeholder="—" style="display:block;width:100%;margin-top:4px"></label>
+            <label style="display:block;margin-bottom:8px">Modalità
+              <select name="modalita" style="display:block;margin-top:4px">
+                <option value="INGRESSI" ${(s.modalita || 'INGRESSI') === 'INGRESSI' ? 'selected' : ''}>A ingressi</option>
+                <option value="MENSILE" ${s.modalita === 'MENSILE' ? 'selected' : ''}>Mensile</option>
+              </select>
+            </label>
+            <label style="display:block;margin-bottom:8px">Ingressi <input name="ingressi" type="number" min="0" value="${s.ingressi}" style="width:80px;margin-top:4px"></label>
+            <label style="display:block;margin-bottom:8px">Prezzo (€) <input type="number" min="0" step="0.01" value="${(Number(s.prezzo_cent || 0) / 100).toFixed(2)}" class="js-eur" style="width:100px;margin-top:4px"></label>
+            <input type="hidden" name="prezzo_cent" value="${s.prezzo_cent}" class="js-cent">
+            <button type="submit" class="btn small">Salva</button>
+          </form>
+        </details>
         <form method="POST" action="/admin/servizi/${s.id}/toggle-attivo" style="display:inline">
           <button type="submit" class="btn btn-ghost small">${s.attivo ? 'Disattiva' : 'Riattiva'}</button>
         </form>
@@ -741,8 +840,8 @@ router.get('/servizi', (req, res) => {
     <h2 class="section-gap">Listino</h2>
     <div class="table-wrap hide-mobile">
       <table class="table">
-        <thead><tr><th>ID</th><th>Servizio</th><th>Descrizione</th><th>Ingressi</th><th>Prezzo</th><th>Stato</th><th class="col-right">Azioni</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" class="muted">Nessun servizio.</td></tr>`}</tbody>
+        <thead><tr><th>ID</th><th>Servizio</th><th>Descrizione</th><th>Modalità</th><th>Ingressi</th><th>Prezzo</th><th>Stato</th><th class="col-right">Azioni</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="8" class="muted">Nessun servizio.</td></tr>`}</tbody>
       </table>
     </div>
     <div class="card-list">${cards}</div>
