@@ -21,12 +21,21 @@ const apiRouter = express.Router();
 
 const { escapeHtml, alertBlock, backWithMsg, fmtDateShort, fmtDateTimeFull } = require('../utils/helpers');
 const { buildAdminCounts } = require('../utils/adminCounts');
+const config = require('../config');
 
 // =====================================================================
 // POST /api/nfc/check  (pubblico: usabile da lettore o da simulatore)
 // =====================================================================
-// Accetta { uid } oppure { codice }.
-apiRouter.post('/check', express.json(), express.urlencoded({ extended: false }), (req, res) => {
+// Se NFC_API_TOKEN è configurato, richiede header X-NFC-Token.
+// Eccezione: sessioni admin attive (simulatore) bypassano il token.
+apiRouter.post('/check', (req, res, next) => {
+  if (!config.nfcApiToken) return next();
+  if (req.admin && req.admin.id) return next();
+  if (req.headers['x-nfc-token'] !== config.nfcApiToken) {
+    return res.status(401).json({ ok: false, reason: 'unauthorized' });
+  }
+  next();
+}, express.json(), express.urlencoded({ extended: false }), (req, res) => {
   const body = req.body || {};
   const uid = body.uid || body.codice || body.code || null;
   const sorgente = body.sorgente || 'endpoint';

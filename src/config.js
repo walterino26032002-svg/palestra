@@ -18,10 +18,19 @@ function ensureDir(dir) {
   }
 }
 
+const UNSAFE_SECRETS = ['dev-secret-change-me', 'cambiami-in-produzione', 'cambiami-in-prod', 'change-me', 'secret', 'admin', 'password', 'cambiami'];
+const sessionSecret = process.env.SESSION_SECRET || '';
+if (!sessionSecret || sessionSecret.length < 20 || UNSAFE_SECRETS.includes(sessionSecret.toLowerCase())) {
+  console.error('[CONFIG] SESSION_SECRET non valido o placeholder. Imposta un valore sicuro in .env (min 20 caratteri).');
+  console.error('[CONFIG] Genera con: openssl rand -base64 48');
+  process.exit(1);
+}
+
 const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
-  sessionSecret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+  sessionSecret,
+  nfcApiToken: process.env.NFC_API_TOKEN || null,
 
   dbPath: path.isAbsolute(process.env.DB_PATH || '')
     ? process.env.DB_PATH
