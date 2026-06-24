@@ -360,12 +360,14 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
 
     <section class="svc-stats">
       <div class="svc-stat">
-        <p class="eyebrow">Saldo ingressi</p>
+        <p class="eyebrow">Ingressi</p>
         <div class="v"${Number(cliente.saldo_ingressi) < 0 ? ' style="color:var(--danger)"' : ''}>${cliente.saldo_ingressi}</div>
       </div>
       <div class="svc-stat">
-        <p class="eyebrow">Badge</p>
-        <div style="margin-top:8px"><span class="badge badge-${escapeHtml(cliente.badge_tone)}">${escapeHtml(cliente.badge_label)}</span></div>
+        <p class="eyebrow">Abbonamento</p>
+        <div style="margin-top:8px">${mensileAttivoOra
+          ? `<span class="badge badge-ok">Mensile attivo fino al ${mensileAttivoOra.data_fine.split('-').reverse().join('/')}</span>`
+          : '<span class="badge badge-muted">Nessun mensile attivo</span>'}</div>
       </div>
       <div class="svc-stat">
         <p class="eyebrow">Scheda</p>
@@ -374,10 +376,24 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
           : '<span class="badge badge-warn">Senza scheda</span>'}</div>
       </div>
       <div class="svc-stat">
-        <p class="eyebrow">Abbonamento</p>
-        <div style="margin-top:8px">${mensileAttivoOra
-          ? `<span class="badge badge-ok">Mensile attivo fino al ${mensileAttivoOra.data_fine.split('-').reverse().join('/')}</span>`
-          : '<span class="badge badge-muted">Nessun mensile attivo</span>'}</div>
+        <p class="eyebrow">Pagamenti</p>
+        <div style="margin-top:8px">${(() => {
+          const n = pagamenti.filter(p => p.stato_pagamento === 'DA_SALDARE').length
+            + mensiliCliente.filter(m => m.stato_pagamento === 'DA_SALDARE').length
+            + (assCorrente && assCorrente.stato_pagamento === 'DA_SALDARE' ? 1 : 0);
+          return n > 0
+            ? `<span class="badge badge-warn">Da saldare (${n})</span>`
+            : '<span class="badge badge-ok">Tutto saldato</span>';
+        })()}</div>
+      </div>
+      <div class="svc-stat">
+        <p class="eyebrow">Assicurazione</p>
+        <div style="margin-top:8px">${(() => {
+          if (!assCorrente) return '<span class="badge badge-muted">Assente</span>';
+          if (assCorrente.stato_pagamento === 'DA_SALDARE') return '<span class="badge badge-warn">Da saldare</span>';
+          const fine = assCorrente.data_fine.split('-').reverse().join('/');
+          return `<span class="badge badge-ok">Pagata fino al ${fine}</span>`;
+        })()}</div>
       </div>
     </section>
 
@@ -534,6 +550,9 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
         </form>
       </details>
     </section>
+
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Movimenti ingressi</summary>
       <div class="table-wrap" style="margin-top:10px">
         <table class="table">
           <thead><tr><th>Data</th><th class="col-right">Δ</th><th>Motivo</th></tr></thead>
