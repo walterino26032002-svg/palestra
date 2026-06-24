@@ -114,7 +114,12 @@ function upsertFeedbackSeduta(clienteId, sedutaId, data = {}) {
   if (seduta.stato !== 'PROSSIMA' && seduta.stato !== 'COMPLETATA') {
     const e = new Error('Feedback seduta non disponibile'); e.code = 'invalid_state'; throw e;
   }
+  // D4: blocca modifiche se il coach ha già revisionato
   const db = getDb();
+  const esistente = db.prepare('SELECT revisionato_il FROM feedback_seduta WHERE seduta_id = ? AND cliente_id = ?').get(sedutaId, clienteId);
+  if (esistente && esistente.revisionato_il) {
+    const e = new Error('Allenamento già revisionato dal coach'); e.code = 'invalid_state'; throw e;
+  }
   db.prepare(`
     INSERT INTO feedback_seduta (seduta_id, cliente_id, commento, voto, inviato_il, revisionato_il, note_coach)
     VALUES (?, ?, ?, ?, COALESCE((SELECT inviato_il FROM feedback_seduta WHERE seduta_id = ? AND cliente_id = ?), datetime('now')), ?, ?)

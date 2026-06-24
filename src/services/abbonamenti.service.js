@@ -60,6 +60,14 @@ function creaAbbonamento({ clienteId, tipoAbbonamentoId, dataInizio, dataFine, s
     const e = new Error('Data fine deve essere uguale o successiva a data inizio'); e.code = 'validation'; throw e;
   }
   const db = getDb();
+  // D2: blocca mensili con date sovrapposte per lo stesso cliente
+  const sovrapposto = db.prepare(`
+    SELECT id FROM abbonamenti_mensili_cliente
+    WHERE cliente_id = ? AND data_inizio <= ? AND data_fine >= ?
+  `).get(clienteId, dataFine, dataInizio);
+  if (sovrapposto) {
+    const e = new Error('Il cliente ha già un abbonamento mensile in questo periodo'); e.code = 'validation'; throw e;
+  }
   const info = db.prepare(`
     INSERT INTO abbonamenti_mensili_cliente
       (cliente_id, tipo_abbonamento_id, data_inizio, data_fine, stato_pagamento, note, admin_id)

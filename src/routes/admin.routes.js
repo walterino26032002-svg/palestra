@@ -224,7 +224,7 @@ router.get('/clienti/nuovo', (req, res) => {
     active: '/admin/clienti',
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Clienti', href: '/admin/clienti' },
       { label: 'Nuovo' },
     ],
@@ -407,7 +407,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
           </select>
         </label>
         <span class="ingressi-fields">
-          <label>Importo (cent) <input name="importo_cent" type="number" min="0" placeholder="listino"></label>
+          <label>Importo (€) <input name="importo_eur" type="number" min="0" step="0.01" placeholder="es. 50.00 — lascia vuoto per usare il listino"></label>
         </span>
         <span class="mensile-fields" style="display:none">
           <label>Data inizio <input name="data_inizio" type="date"></label>
@@ -489,7 +489,7 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     active: '/admin/clienti',
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Clienti', href: '/admin/clienti' },
       { label: `${cliente.cognome} ${cliente.nome}` },
     ],
@@ -551,12 +551,12 @@ router.post('/clienti/:id(\\d+)/toggle-attivo', (req, res) => {
 // Registra pagamento per un cliente
 router.post('/clienti/:id(\\d+)/pagamenti', express.urlencoded({ extended: false }), (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { servizio_id, importo_cent, metodo, note, stato_pagamento } = req.body || {};
+  const { servizio_id, importo_eur, metodo, note, stato_pagamento } = req.body || {};
   try {
     const result = pagamentiService.registraPagamento({
       clienteId: id,
       servizioId: parseInt(servizio_id, 10),
-      importoCent: importo_cent ? parseInt(importo_cent, 10) : undefined,
+      importoCent: importo_eur ? Math.round(parseFloat(importo_eur) * 100) : undefined,
       metodo,
       note,
       adminId: req.admin && req.admin.id ? req.admin.id : null,
@@ -774,7 +774,7 @@ router.get('/servizi', (req, res) => {
     user: req.admin,
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'Servizi' },
     ],
   }));
@@ -897,7 +897,7 @@ router.get('/sistema', (req, res) => {
     title: 'Sistema',
     user: req.admin,
     body,
-    breadcrumb: [{ label: 'Dashboard', href: '/admin' }, { label: 'Sistema' }],
+    breadcrumb: [{ label: 'Bacheca', href: '/admin' }, { label: 'Export / Backup' }],
   }));
 });
 

@@ -178,7 +178,7 @@ router.get('/nfc/nuova', (req, res) => {
     user: req.admin,
     body,
     breadcrumb: [
-      { label: 'Dashboard', href: '/admin' },
+      { label: 'Bacheca', href: '/admin' },
       { label: 'NFC', href: '/admin/nfc' },
       { label: 'Nuova' },
     ],

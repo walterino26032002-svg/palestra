@@ -10,14 +10,13 @@ const { escapeHtml } = require('../utils/helpers');
 
 // Voci di navigazione admin (coerenti ovunque). `active` evidenzia la sezione.
 const NAV = [
-  { href: '/admin',         label: 'Bacheca',        countHref: '/admin/bacheca' },
-  { href: '/admin/clienti', label: 'Clienti' },
-  { href: '/admin/servizi', label: 'Pacchetti' },
-  { href: '/admin/schede',  label: 'Schede',
-    activeOn: ['/admin/revisioni'] },
-  { href: '/admin/nfc',     label: 'NFC / Ingressi' },
-  { href: '/admin/export',  label: 'Sistema',
-    activeOn: ['/admin/backup'] },
+  { href: '/admin',            label: 'Bacheca',        countHref: '/admin/bacheca' },
+  { href: '/admin/clienti',    label: 'Clienti' },
+  { href: '/admin/servizi',    label: 'Pacchetti' },
+  { href: '/admin/schede',     label: 'Schede' },
+  { href: '/admin/revisioni',  label: 'Revisioni',      countHref: '/admin/revisioni' },
+  { href: '/admin/nfc',        label: 'NFC / Ingressi' },
+  { href: '/admin/export',     label: 'Export / Backup', activeOn: ['/admin/backup'] },
 ];
 
 function navHtml(active, counts = {}) {

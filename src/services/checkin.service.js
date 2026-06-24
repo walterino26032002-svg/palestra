@@ -193,11 +193,19 @@ function elaboraCheckin({ uid, sorgente = 'endpoint' }) {
 
   const prossima = findProssimaSeduta(clienteId);
   if (!prossima) {
-    bacheca.creaAvviso({
-      tipo: bacheca.TIPI.SEDUTA_MANCANTE,
-      clienteId,
-      messaggio: `Cliente ${tessera.cli_cognome} ${tessera.cli_nome} ha fatto check-in ma non ha una seduta PROSSIMA.`,
-    });
+    // D1: evita avvisi seduta_mancante duplicati per stesso cliente/data
+    const db2 = getDb();
+    const avvisoOggi = db2.prepare(`
+      SELECT id FROM avvisi_bacheca
+      WHERE tipo = 'seduta_mancante' AND cliente_id = ? AND DATE(creato_il) = ?
+    `).get(clienteId, todayISO());
+    if (!avvisoOggi) {
+      bacheca.creaAvviso({
+        tipo: bacheca.TIPI.SEDUTA_MANCANTE,
+        clienteId,
+        messaggio: `Cliente ${tessera.cli_cognome} ${tessera.cli_nome} ha fatto check-in ma non ha una seduta PROSSIMA.`,
+      });
+    }
   }
 
   return {
