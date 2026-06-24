@@ -204,7 +204,7 @@ router.get('/clienti', (req, res) => {
       <td class="muted">${escapeHtml(c.email || '—')}</td>
       <td class="muted">${escapeHtml(c.telefono || '—')}</td>
       <td class="col-right">${saldoCell(c)}</td>
-      <td><span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span></td>
+      <td>${c.badge_label ? `<span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span>` : ''}</td>
       <td>${daSaldare ? '<span class="badge badge-warn">Da saldare</span>' : '<span class="badge badge-ok">Tutto saldato</span>'}</td>
       <td>${assBadge}</td>
       <td>${statoCliente(c)}</td>
@@ -222,7 +222,7 @@ router.get('/clienti', (req, res) => {
       </div>
       <div class="rc-meta">
         <span>Saldo <b>${c.saldo_ingressi}</b></span>
-        <span><span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span></span>
+        ${c.badge_label ? `<span><span class="badge badge-${escapeHtml(c.badge_tone)}">${escapeHtml(c.badge_label)}</span></span>` : ''}
         <span>${daSaldare ? '<span class="badge badge-warn">Da saldare</span>' : '<span class="badge badge-ok">Saldato</span>'}</span>
         <span>${assStato === 'PAGATO' ? '<span class="badge badge-ok">Ass. OK</span>' : assStato === 'DA_SALDARE' ? '<span class="badge badge-warn">Ass. da saldare</span>' : '<span class="badge badge-muted">Ass. assente</span>'}</span>
       </div>
@@ -258,7 +258,7 @@ router.get('/clienti', (req, res) => {
       <table class="table">
         <thead><tr>
           <th>Nome</th><th>Email</th><th>Telefono</th>
-          <th class="col-right">Saldo</th><th>Badge</th><th>Pagamenti</th><th>Assicurazione</th><th>Stato</th>
+          <th class="col-right">Saldo</th><th>PACK/ABBONAMENTO</th><th>Pagamenti</th><th>Assicurazione</th><th>Stato</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>

@@ -27,10 +27,15 @@ function listClienti({ soloAttivi = false, q = '' } = {}) {
     ORDER BY cognome ASC, nome ASC
   `;
   const rows = db.prepare(sql).all(...params);
+  const today = new Date().toISOString().slice(0, 10);
+  const stmtMensile = db.prepare(
+    "SELECT 1 FROM abbonamenti_mensili_cliente WHERE cliente_id=? AND data_inizio<=? AND data_fine>=? LIMIT 1"
+  );
   // Allega saldo + badge per ogni riga (semplice, N piccolo in V1).
   return rows.map((r) => {
     const saldo = movimenti.getSaldo(r.id);
-    const badge = movimenti.getBadge({ cliente: r, saldo });
+    const hasActiveMensile = !!stmtMensile.get(r.id, today, today);
+    const badge = movimenti.getBadge({ cliente: r, saldo, hasActiveMensile });
     return { ...r, saldo_ingressi: saldo, badge_label: badge.label, badge_tone: badge.tone };
   });
 }
@@ -44,7 +49,11 @@ function getCliente(id) {
   `).get(id);
   if (!row) return null;
   const saldo = movimenti.getSaldo(row.id);
-  const badge = movimenti.getBadge({ cliente: row, saldo });
+  const today = new Date().toISOString().slice(0, 10);
+  const hasActiveMensile = !!db.prepare(
+    "SELECT 1 FROM abbonamenti_mensili_cliente WHERE cliente_id=? AND data_inizio<=? AND data_fine>=? LIMIT 1"
+  ).get(row.id, today, today);
+  const badge = movimenti.getBadge({ cliente: row, saldo, hasActiveMensile });
   return {
     ...row,
     has_password: !!row.password_must_change !== undefined, // placeholder

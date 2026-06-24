@@ -64,14 +64,11 @@ function getMovimenti(clienteId, { limit = 200 } = {}) {
  * finché non arriva il modulo NFC; viene aggiunto dal chiamante se servono
  * entrambi). Regola: Non attivo ha priorità assoluta.
  */
-function getBadge({ cliente, saldo }) {
-  if (!cliente || !cliente.attivo) {
-    return { label: 'Non attivo', tone: 'danger' };
-  }
-  if (saldo >= 2) return { label: 'Attivo', tone: 'ok' };
-  if (saldo === 1) return { label: 'Ultimo ingresso', tone: 'warn' };
-  if (saldo === 0) return { label: 'Da rinnovare', tone: 'warn' };
-  return { label: 'Da regolarizzare', tone: 'danger' };
+function getBadge({ cliente, saldo, hasActiveMensile = false }) {
+  if (!cliente || !cliente.attivo) return { label: 'Non attivo', tone: 'danger' };
+  if (saldo > 0 || hasActiveMensile) return { label: 'Attivo', tone: 'ok' };
+  if (saldo < 0) return { label: 'Da regolarizzare', tone: 'danger' };
+  return { label: '', tone: 'muted' };
 }
 
 module.exports = {
