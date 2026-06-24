@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 /**
  * Route admin: clienti, servizi, pagamenti.
@@ -368,242 +368,243 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     `<option value="${s.id}" data-modalita="${s.modalita || 'INGRESSI'}">${escapeHtml(s.nome)} — ${s.modalita === 'MENSILE' ? 'Mensile' : s.ingressi + ' ingr.'} (${fmtEurFromCent(s.prezzo_cent)})</option>`
   ).join('');
 
+  const iniziali = (escapeHtml(cliente.cognome || '').charAt(0) + escapeHtml(cliente.nome || '').charAt(0)).toUpperCase();
   const statoBadge = cliente.attivo
     ? '<span class="badge badge-ok">Attivo</span>'
     : '<span class="badge badge-muted">Non attivo</span>';
 
-  const body = `
-    <header class="page-head">
-      <p class="eyebrow">Profilo cliente</p>
-      <div class="row-between" style="margin-bottom:0">
-        <h1>${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} ${statoBadge}</h1>
-        <div class="toolbar">
-          <a class="btn" href="/admin/clienti">← Tutti i clienti</a>
-        </div>
-      </div>
-    </header>
+  const pagDaSaldare = pagamenti.filter(p => p.stato_pagamento === 'DA_SALDARE').length
+    + mensiliCliente.filter(m => m.stato_pagamento === 'DA_SALDARE').length
+    + (assCorrente && assCorrente.stato_pagamento === 'DA_SALDARE' ? 1 : 0);
 
+  const body = `
     ${alertBlock('ok', req.query.ok)}${alertBlock('error', req.query.err)}
 
-    ${!schedaRiepilogo.prossima_seduta ? `
-    <div class="card" style="border-color:var(--warn);margin-bottom:16px;padding:12px 16px">
-      <span class="badge badge-warn">Nessuna seduta PROSSIMA</span>
-      <span class="muted small" style="margin-left:10px">Il cliente non vedrà allenamento al check-in finché non ne imposti una.</span>
-      <a class="btn small" href="/admin/clienti/${cliente.id}/scheda" style="margin-left:12px">Apri scheda →</a>
-    </div>` : ''}
-
-    <section class="svc-stats">
-      <div class="svc-stat">
-        <p class="eyebrow">Ingressi</p>
-        <div class="v"${Number(cliente.saldo_ingressi) < 0 ? ' style="color:var(--danger)"' : ''}>${cliente.saldo_ingressi}</div>
+    <div class="client-profile">
+      <div class="client-profile__left">
+        <div class="client-avatar">${iniziali}</div>
+        <div class="client-info">
+          <h1 class="client-name">${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)}</h1>
+          ${statoBadge}
+          ${cliente.email ? `<p class="client-contact"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg> ${escapeHtml(cliente.email)}</p>` : ''}
+          ${cliente.telefono ? `<p class="client-contact"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.8 19.8 0 0 1-3-8.59A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ${escapeHtml(cliente.telefono)}</p>` : ''}
+        </div>
       </div>
-      <div class="svc-stat">
-        <p class="eyebrow">Abbonamento</p>
-        <div style="margin-top:8px">${mensileAttivoOra
-          ? `<span class="badge badge-ok">Mensile attivo fino al ${mensileAttivoOra.data_fine.split('-').reverse().join('/')}</span>`
-          : '<span class="badge badge-muted">Nessun mensile attivo</span>'}</div>
-      </div>
-      <div class="svc-stat">
-        <p class="eyebrow">Scheda</p>
-        <div style="margin-top:8px">${schedaRiepilogo.ha_scheda
-          ? (schedaRiepilogo.prossima_seduta ? '<span class="badge badge-ok">Seduta pronta</span>' : '<span class="badge badge-warn">Nessuna PROSSIMA</span>')
-          : '<span class="badge badge-warn">Senza scheda</span>'}</div>
-      </div>
-      <div class="svc-stat">
-        <p class="eyebrow">Pagamenti</p>
-        <div style="margin-top:8px">${(() => {
-          const n = pagamenti.filter(p => p.stato_pagamento === 'DA_SALDARE').length
-            + mensiliCliente.filter(m => m.stato_pagamento === 'DA_SALDARE').length
-            + (assCorrente && assCorrente.stato_pagamento === 'DA_SALDARE' ? 1 : 0);
-          return n > 0
-            ? `<span class="badge badge-warn">Da saldare (${n})</span>`
-            : '<span class="badge badge-ok">Tutto saldato</span>';
-        })()}</div>
-      </div>
-      <div class="svc-stat">
-        <p class="eyebrow">Assicurazione</p>
-        <div style="margin-top:8px">${(() => {
-          if (!assCorrente) return '<span class="badge badge-muted">Assente</span>';
-          if (assCorrente.stato_pagamento === 'DA_SALDARE') return '<span class="badge badge-warn">Da saldare</span>';
-          const fine = assCorrente.data_fine.split('-').reverse().join('/');
-          return `<span class="badge badge-ok">Pagata fino al ${fine}</span>`;
-        })()}</div>
-      </div>
-    </section>
-
-    <section class="section-gap card">
-      <h2>Scheda allenamento</h2>
-      ${schedaRiepilogo.ha_scheda
-        ? `<p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count}</strong> (${schedaRiepilogo.blocchi_archiviati} archiviati)
-               · Sedute: <strong>${schedaRiepilogo.sedute_totali}</strong>
-               (${schedaRiepilogo.sedute_completate} completate)</p>
-           ${schedaRiepilogo.prossima_seduta
-             ? `<p>Seduta PROSSIMA: <a href="/admin/sedute/${schedaRiepilogo.prossima_seduta.id}">Settimana ${schedaRiepilogo.prossima_seduta.indice_settimana} · Seduta ${schedaRiepilogo.prossima_seduta.indice_seduta}</a></p>`
-             : ''}
-           <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Apri scheda completa</a>`
-        : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
-           <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco</a>`}
-    </section>
-
-    <section class="section-gap">
-      <h2>Registra pagamento / Abbonamento</h2>
-      <form method="POST" action="/admin/clienti/${cliente.id}/pagamenti" class="card form-inline" id="frmPagamento">
-        <label>Servizio
-          <select name="servizio_id" id="srvSelect" required>
-            <option value="">— seleziona —</option>
-            ${serviziOptions}
-          </select>
-        </label>
-        <span class="ingressi-fields">
-          <label>Importo (€) <input name="importo_eur" type="number" min="0" step="0.01" placeholder="es. 50.00 — lascia vuoto per usare il listino"></label>
-        </span>
-        <span class="mensile-fields" style="display:none">
-          <label>Data inizio <input name="data_inizio" type="date"></label>
-          <label>Data fine <input name="data_fine" type="date"></label>
-        </span>
-        <label>Stato pagamento
-          <select name="stato_pagamento">
-            <option value="PAGATO" selected>Pagato</option>
-            <option value="DA_SALDARE">Da saldare</option>
-          </select>
-        </label>
-        <label>Metodo <input name="metodo" placeholder="contanti, bonifico..."></label>
-        <label>Note <input name="note"></label>
-        <button type="submit" class="btn btn-primary">Registra</button>
-      </form>
-      <script>
-        (function () {
-          var sel = document.getElementById('srvSelect');
-          var iF = document.querySelector('.ingressi-fields');
-          var mF = document.querySelector('.mensile-fields');
-          var frm = document.getElementById('frmPagamento');
-          function toggle() {
-            var opt = sel.options[sel.selectedIndex];
-            var isMensile = opt && opt.getAttribute('data-modalita') === 'MENSILE';
-            iF.style.display = isMensile ? 'none' : '';
-            mF.style.display = isMensile ? '' : 'none';
-            frm.action = isMensile
-              ? '/admin/clienti/${cliente.id}/abbonamenti-mensili'
-              : '/admin/clienti/${cliente.id}/pagamenti';
-          }
-          if (sel) sel.addEventListener('change', toggle);
-        })();
-      </script>
-    </section>
-
-    <section class="section-gap">
-      <h2>Assicurazione annuale ${annoCorrente}</h2>
-      ${(() => {
-        if (!assCorrente) return `
-          <p class="muted small" style="margin:8px 0">Nessuna assicurazione registrata per il ${annoCorrente}.</p>`;
-        const tone = assCorrente.stato_pagamento === 'PAGATO' ? 'ok' : 'warn';
-        const label = assCorrente.stato_pagamento === 'PAGATO' ? 'Pagata' : 'Da saldare';
-        const fmtD = (v) => v ? String(v).split('-').reverse().join('/') : '—';
-        return `
-          <p style="margin:8px 0">
-            <span class="badge badge-${escapeHtml(tone)}">${label}</span>
-            <span class="muted small" style="margin-left:8px">valida dal ${fmtD(assCorrente.data_inizio)} al ${fmtD(assCorrente.data_fine)}</span>
-            ${assCorrente.note ? `<span class="muted small" style="margin-left:8px">— ${escapeHtml(assCorrente.note)}</span>` : ''}
-          </p>
-          ${assCorrente.stato_pagamento === 'DA_SALDARE' ? `
-          <form method="POST" action="/admin/clienti/${cliente.id}/assicurazione/${assCorrente.id}/pagata" style="display:inline;margin-top:8px">
-            <button type="submit" class="btn btn-ghost small">Segna come pagata</button>
-          </form>` : ''}`;
-      })()}
-      <details style="margin-top:16px">
-        <summary style="cursor:pointer;font-size:13px;padding:4px 0">Registra assicurazione anno corrente</summary>
-        <form method="POST" action="/admin/clienti/${cliente.id}/assicurazione" class="card form-inline" style="margin-top:10px">
-          <label>Anno <input name="anno" type="number" value="${annoCorrente}" min="2020" max="2100" style="width:90px"></label>
-          <label>Stato
-            <select name="stato_pagamento">
-              <option value="PAGATO" selected>Pagata</option>
-              <option value="DA_SALDARE">Da saldare</option>
-            </select>
-          </label>
-          <label>Note <input name="note" placeholder="opzionale"></label>
-          <button type="submit" class="btn btn-primary small">Registra</button>
-        </form>
-      </details>
-    </section>
-
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Storico pagamenti</summary>
-      <div class="table-wrap" style="margin-top:10px">
-        <table class="table">
-          <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th><th>Stato</th></tr></thead>
-          <tbody>${pagRows}</tbody>
-        </table>
-      </div>
-    </details>
-
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Abbonamenti mensili</summary>
-      <div class="table-wrap" style="margin-top:10px">
-        <table class="table">
-          <thead><tr><th>Tipo</th><th>Dal</th><th>Al</th><th>Stato</th></tr></thead>
-          <tbody>${mensileRows}</tbody>
-        </table>
-      </div>
-    </details>
-
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Movimenti ingressi</summary>
-      <div class="table-wrap" style="margin-top:10px">
-        <table class="table">
-          <thead><tr><th>Data</th><th class="col-right">Δ</th><th>Motivo</th></tr></thead>
-          <tbody>${movRows}</tbody>
-        </table>
-      </div>
-    </details>
-
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Anagrafica cliente · ${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} · ${cliente.attivo ? 'Attivo' : 'Non attivo'}</summary>
-      <div class="card" style="margin-top:10px">
-        <form method="POST" action="/admin/clienti/${cliente.id}" class="form-stacked">
-          <label>Nome <input name="nome" value="${escapeHtml(cliente.nome)}" required></label>
-          <label>Cognome <input name="cognome" value="${escapeHtml(cliente.cognome)}" required></label>
-          <label>Email <input name="email" type="email" value="${escapeHtml(cliente.email || '')}"></label>
-          <label>Telefono <input name="telefono" value="${escapeHtml(cliente.telefono || '')}"></label>
-          <label>Note <textarea name="note" rows="2">${escapeHtml(cliente.note || '')}</textarea></label>
-          <label>Stato
-            <select name="attivo">
-              <option value="1" ${cliente.attivo ? 'selected' : ''}>Attivo</option>
-              <option value="0" ${!cliente.attivo ? 'selected' : ''}>Non attivo</option>
-            </select>
-          </label>
-          <div class="toolbar">
-            <button type="submit" class="btn btn-primary">Salva anagrafica</button>
+      <div class="client-profile__right">
+        <div class="client-metrics">
+          <div class="client-metric">
+            <span class="client-metric__value${Number(cliente.saldo_ingressi) < 0 ? ' client-metric__value--danger' : ''}">${cliente.saldo_ingressi}</span>
+            <span class="client-metric__label">Ingressi</span>
           </div>
-        </form>
+          <div class="client-metric">
+            <span class="client-metric__value client-metric__value--sm">${mensileAttivoOra ? '<span class="badge badge-ok">Attivo</span>' : '<span class="badge badge-muted">Nessuno</span>'}</span>
+            <span class="client-metric__label">Abbonamento</span>
+          </div>
+          <div class="client-metric">
+            <span class="client-metric__value client-metric__value--sm">${schedaRiepilogo.ha_scheda ? (schedaRiepilogo.prossima_seduta ? '<span class="badge badge-ok">Pronta</span>' : '<span class="badge badge-warn">No PROSSIMA</span>') : '<span class="badge badge-warn">Assente</span>'}</span>
+            <span class="client-metric__label">Scheda</span>
+          </div>
+          <div class="client-metric">
+            <span class="client-metric__value client-metric__value--sm">${pagDaSaldare > 0 ? `<span class="badge badge-warn">Da saldare (${pagDaSaldare})</span>` : '<span class="badge badge-ok">OK</span>'}</span>
+            <span class="client-metric__label">Pagamenti</span>
+          </div>
+          <div class="client-metric">
+            <span class="client-metric__value client-metric__value--sm">${!assCorrente ? '<span class="badge badge-muted">Assente</span>' : assCorrente.stato_pagamento === 'DA_SALDARE' ? '<span class="badge badge-warn">Da saldare</span>' : `<span class="badge badge-ok">Valida al ${assCorrente.data_fine.split('-').reverse().join('/')}</span>`}</span>
+            <span class="client-metric__label">Assicurazione</span>
+          </div>
+        </div>
+        <div class="client-actions">
+          <details class="dropdown">
+            <summary class="btn">Azioni ▾</summary>
+            <div class="dropdown-menu">
+              <form method="POST" action="/admin/clienti/${cliente.id}/toggle-attivo"><button type="submit" class="dropdown-item">${cliente.attivo ? 'Disattiva cliente' : 'Attiva cliente'}</button></form>
+              <a class="dropdown-item" href="/admin/clienti/${cliente.id}/scheda">Apri scheda</a>
+              <a class="dropdown-item" href="/admin/clienti/${cliente.id}/scheda/stampa" target="_blank">Stampa PDF</a>
+              <a class="dropdown-item" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
+              <a class="dropdown-item" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report</a>
+            </div>
+          </details>
+          <a class="btn btn-primary" href="#accordion-dettagli">Modifica cliente</a>
+        </div>
       </div>
-    </details>
+    </div>
 
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Accesso cliente${cliente.username ? ` · username: ${escapeHtml(cliente.username)}` : ''}</summary>
-      <div class="card" style="margin-top:10px">
-        <p class="muted small" style="margin-bottom:12px"><strong>Nome utente</strong><br>
-          ${cliente.username
-            ? `<code>${escapeHtml(cliente.username)}</code>`
-            : (cleanPart(cliente.nome) && cleanPart(cliente.cognome)
-              ? '<span class="muted">Da attivare — salva l\'anagrafica per generare il nome utente.</span>'
-              : '<span class="muted">Non disponibile — compila Nome e Cognome in Anagrafica.</span>')}
-        </p>
-        <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
-          <label>Nuova password <input name="password" type="password" required></label>
-          <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
-        </form>
-        <p class="muted small">La password non è visibile dopo il salvataggio. Puoi solo impostarne una nuova.</p>
-      </div>
-    </details>
+    <div class="client-layout">
+      <div class="client-layout__main">
 
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Export e stampe</summary>
-      <div class="toolbar" style="margin-top:10px">
-        <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda/stampa" target="_blank">Stampa scheda</a>
-        <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
-        <a class="btn" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report</a>
+        <div class="card section-gap">
+          <h2 class="section-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Scheda allenamento</h2>
+          ${schedaRiepilogo.ha_scheda
+            ? `<p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count}</strong> (${schedaRiepilogo.blocchi_archiviati} archiviati) · Sedute: <strong>${schedaRiepilogo.sedute_totali}</strong> (${schedaRiepilogo.sedute_completate} completate)</p>
+               ${schedaRiepilogo.prossima_seduta
+                 ? `<div class="scheda-attiva-card"><span class="scheda-attiva-label">SCHEDA ATTIVA</span><a href="/admin/sedute/${schedaRiepilogo.prossima_seduta.id}" class="scheda-attiva-link">Settimana ${schedaRiepilogo.prossima_seduta.indice_settimana} · Seduta ${schedaRiepilogo.prossima_seduta.indice_seduta} →</a></div>`
+                 : '<p class="muted small"><span class="badge badge-warn">Nessuna seduta PROSSIMA</span> Il cliente non vedrà allenamento al check-in.</p>'}
+               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda" style="margin-top:10px">Apri scheda completa</a>`
+            : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
+               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco</a>`}
+        </div>
+
+        <div class="card section-gap">
+          <h2 class="section-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Assicurazione annuale ${annoCorrente}</h2>
+          ${(() => {
+            if (!assCorrente) return `<p class="muted small">Nessuna assicurazione registrata per il ${annoCorrente}.</p>`;
+            const tone = assCorrente.stato_pagamento === 'PAGATO' ? 'ok' : 'warn';
+            const label = assCorrente.stato_pagamento === 'PAGATO' ? 'Pagata' : 'Da saldare';
+            const fmtD = (v) => v ? String(v).split('-').reverse().join('/') : '—';
+            return `<p><span class="badge badge-${escapeHtml(tone)}">${label}</span> <span class="muted small">valida dal ${fmtD(assCorrente.data_inizio)} al ${fmtD(assCorrente.data_fine)}</span>${assCorrente.note ? ` <span class="muted small">— ${escapeHtml(assCorrente.note)}</span>` : ''}</p>
+              ${assCorrente.stato_pagamento === 'DA_SALDARE' ? `<form method="POST" action="/admin/clienti/${cliente.id}/assicurazione/${assCorrente.id}/pagata" style="display:inline"><button type="submit" class="btn btn-ghost small">Segna come pagata</button></form>` : ''}`;
+          })()}
+          <details style="margin-top:14px">
+            <summary style="cursor:pointer;font-size:13px;color:var(--accent)">+ Registra assicurazione</summary>
+            <form method="POST" action="/admin/clienti/${cliente.id}/assicurazione" class="form-inline card" style="margin-top:10px">
+              <label>Anno <input name="anno" type="number" value="${annoCorrente}" min="2020" max="2100" style="width:90px"></label>
+              <label>Stato <select name="stato_pagamento"><option value="PAGATO" selected>Pagata</option><option value="DA_SALDARE">Da saldare</option></select></label>
+              <label>Note <input name="note" placeholder="opzionale"></label>
+              <button type="submit" class="btn btn-primary small">Registra</button>
+            </form>
+          </details>
+        </div>
+
+        <details class="accordion-item section-gap" id="accordion-storico-pag">
+          <summary class="accordion-toggle">Storico pagamenti</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table class="table">
+              <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th><th>Stato</th></tr></thead>
+              <tbody>${pagRows}</tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="accordion-item section-gap">
+          <summary class="accordion-toggle">Abbonamenti mensili</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table class="table">
+              <thead><tr><th>Tipo</th><th>Dal</th><th>Al</th><th>Stato</th></tr></thead>
+              <tbody>${mensileRows}</tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="accordion-item section-gap">
+          <summary class="accordion-toggle">Movimenti ingressi</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table class="table">
+              <thead><tr><th>Data</th><th class="col-right">Δ</th><th>Motivo</th></tr></thead>
+              <tbody>${movRows}</tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="accordion-item section-gap">
+          <summary class="accordion-toggle">Rettifica ingressi</summary>
+          <form method="POST" action="/admin/clienti/${cliente.id}/ingressi/rettifica" class="card form-inline" style="margin-top:10px">
+            <label>Tipo <select name="tipo" required><option value="aggiungi">Aggiungi ingressi</option><option value="sottrai">Sottrai ingressi</option></select></label>
+            <label>Numero <input name="quantita" type="number" min="1" step="1" required placeholder="es. 2"></label>
+            <label>Motivo <input name="motivo" required placeholder="es. Correzione import, Omaggio…" style="min-width:200px"></label>
+            <button type="submit" class="btn btn-primary">Applica rettifica</button>
+          </form>
+        </details>
+
+        <details class="accordion-item section-gap" id="accordion-dettagli">
+          <summary class="accordion-toggle">Dettagli · ${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} · ${cliente.attivo ? 'Attivo' : 'Non attivo'}</summary>
+          <div class="card" style="margin-top:10px">
+            <form method="POST" action="/admin/clienti/${cliente.id}" class="form-stacked">
+              <label>Nome <input name="nome" value="${escapeHtml(cliente.nome)}" required></label>
+              <label>Cognome <input name="cognome" value="${escapeHtml(cliente.cognome)}" required></label>
+              <label>Email <input name="email" type="email" value="${escapeHtml(cliente.email || '')}"></label>
+              <label>Telefono <input name="telefono" value="${escapeHtml(cliente.telefono || '')}"></label>
+              <label>Note <textarea name="note" rows="2">${escapeHtml(cliente.note || '')}</textarea></label>
+              <label>Stato <select name="attivo"><option value="1" ${cliente.attivo ? 'selected' : ''}>Attivo</option><option value="0" ${!cliente.attivo ? 'selected' : ''}>Non attivo</option></select></label>
+              <div class="toolbar"><button type="submit" class="btn btn-primary">Salva anagrafica</button></div>
+            </form>
+          </div>
+        </details>
+
+        <details class="accordion-item section-gap">
+          <summary class="accordion-toggle">Accesso cliente${cliente.username ? ` · username: ${escapeHtml(cliente.username)}` : ''}</summary>
+          <div class="card" style="margin-top:10px">
+            <p class="muted small" style="margin-bottom:12px"><strong>Nome utente</strong><br>
+              ${cliente.username
+                ? `<code>${escapeHtml(cliente.username)}</code>`
+                : (cleanPart(cliente.nome) && cleanPart(cliente.cognome)
+                  ? '<span class="muted">Da attivare — salva l\'anagrafica per generare il nome utente.</span>'
+                  : '<span class="muted">Non disponibile — compila Nome e Cognome in Anagrafica.</span>')}
+            </p>
+            <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
+              <label>Nuova password <input name="password" type="password" required></label>
+              <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
+            </form>
+            <p class="muted small">La password non è visibile dopo il salvataggio. Puoi solo impostarne una nuova.</p>
+          </div>
+        </details>
+
+        <details class="accordion-item section-gap">
+          <summary class="accordion-toggle">Export e stampe</summary>
+          <div class="toolbar" style="margin-top:10px">
+            <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda/stampa" target="_blank">Stampa scheda PDF</a>
+            <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
+            <a class="btn" href="/admin/clienti/${cliente.id}/report/xlsx">XLSX report</a>
+          </div>
+        </details>
+
       </div>
-    </details>
+      <div class="client-layout__side">
+
+        <div class="card">
+          <h2 class="section-title">Registra pagamento / Abbonamento</h2>
+          <form method="POST" action="/admin/clienti/${cliente.id}/pagamenti" class="form-stacked" id="frmPagamento">
+            <label>Servizio
+              <select name="servizio_id" id="srvSelect" required>
+                <option value="">— seleziona —</option>
+                ${serviziOptions}
+              </select>
+            </label>
+            <span class="ingressi-fields">
+              <label>Importo (€) <input name="importo_eur" type="number" min="0" step="0.01" placeholder="es. 50.00 — vuoto = listino"></label>
+            </span>
+            <span class="mensile-fields" style="display:none">
+              <label>Data inizio <input name="data_inizio" type="date"></label>
+              <label>Data fine <input name="data_fine" type="date"></label>
+            </span>
+            <label>Stato pagamento
+              <select name="stato_pagamento">
+                <option value="PAGATO" selected>Pagato</option>
+                <option value="DA_SALDARE">Da saldare</option>
+              </select>
+            </label>
+            <label>Metodo <input name="metodo" placeholder="contanti, bonifico..."></label>
+            <label>Note <input name="note"></label>
+            <button type="submit" class="btn btn-primary" style="width:100%">Registra</button>
+          </form>
+          <script>
+            (function () {
+              var sel = document.getElementById('srvSelect');
+              var iF = document.querySelector('.ingressi-fields');
+              var mF = document.querySelector('.mensile-fields');
+              var frm = document.getElementById('frmPagamento');
+              function toggle() {
+                var opt = sel.options[sel.selectedIndex];
+                var isMensile = opt && opt.getAttribute('data-modalita') === 'MENSILE';
+                iF.style.display = isMensile ? 'none' : '';
+                mF.style.display = isMensile ? '' : 'none';
+                frm.action = isMensile
+                  ? '/admin/clienti/${cliente.id}/abbonamenti-mensili'
+                  : '/admin/clienti/${cliente.id}/pagamenti';
+              }
+              if (sel) sel.addEventListener('change', toggle);
+            })();
+          </script>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h2 class="section-title">Riepilogo attività</h2>
+          <p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count || 0}</strong> · Sedute completate: <strong>${schedaRiepilogo.sedute_completate || 0}</strong> / <strong>${schedaRiepilogo.sedute_totali || 0}</strong></p>
+          <p class="muted small" style="margin-top:8px">Ingressi totali consumati: derivato dai movimenti.</p>
+          <a class="btn btn-ghost small" href="/admin/nfc" style="margin-top:10px">Vai a NFC / Ingressi →</a>
+        </div>
+
+      </div>
+    </div>
   `;
 
   res.send(adminLayout({
@@ -737,6 +738,29 @@ router.post('/clienti/:id(\\d+)/abbonamenti-mensili', express.urlencoded({ exten
   } catch (e) {
     console.error(e);
     return backWithMsg(res, `/admin/clienti/${id}`, e.message || 'Errore.', 'err');
+  }
+});
+
+// Rettifica manuale ingressi
+router.post('/clienti/:id(\\d+)/ingressi/rettifica', express.urlencoded({ extended: false }), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { tipo, quantita, motivo } = req.body || {};
+  const n = parseInt(quantita, 10);
+  if (!n || n <= 0 || !motivo || !motivo.trim()) {
+    return backWithMsg(res, `/admin/clienti/${id}`, 'Quantità e motivo obbligatori.', 'err');
+  }
+  const delta = tipo === 'sottrai' ? -n : n;
+  try {
+    movimentiService.insertMovimento({
+      clienteId: id,
+      delta,
+      motivo: `rettifica: ${motivo.trim()}`,
+      riferimentoId: null,
+      adminId: req.admin && req.admin.id ? req.admin.id : null,
+    });
+    return backWithMsg(res, `/admin/clienti/${id}`, `Rettifica applicata: ${delta > 0 ? '+' : ''}${delta} ingressi.`, 'ok');
+  } catch (e) {
+    return backWithMsg(res, `/admin/clienti/${id}`, e.message || 'Errore rettifica.', 'err');
   }
 });
 
