@@ -70,9 +70,30 @@ router.get('/', (req, res) => {
   const daRevisionare = counts['/admin/revisioni'] || 0;
   const nonLetti = counts['/admin/bacheca'] || 0;
 
+  const db = getDb();
+  const annoC = assicurazioni.currentYear();
+
+  // Pagamenti aperti: clienti distinti con almeno un pagamento o mensile DA_SALDARE
+  let pagAperti = 0;
+  try {
+    const set = new Set([
+      ...db.prepare("SELECT DISTINCT cliente_id FROM pagamenti WHERE stato_pagamento='DA_SALDARE'").all().map(r => r.cliente_id),
+      ...db.prepare("SELECT DISTINCT cliente_id FROM abbonamenti_mensili_cliente WHERE stato_pagamento='DA_SALDARE'").all().map(r => r.cliente_id),
+    ]);
+    pagAperti = set.size;
+  } catch (_) {}
+
+  // Assicurazioni non in regola: clienti attivi senza record PAGATO per l'anno corrente
+  let assNonInRegola = 0;
+  try {
+    const totaleAttivi = db.prepare("SELECT COUNT(*) AS n FROM clienti WHERE attivo=1").get().n;
+    const coperti = db.prepare("SELECT COUNT(*) AS n FROM assicurazioni_annuali_cliente WHERE anno=? AND stato_pagamento='PAGATO'").get(annoC).n;
+    assNonInRegola = Math.max(0, totaleAttivi - coperti);
+  } catch (_) {}
+
   let checkinOggi = [];
   try {
-    checkinOggi = getDb().prepare(`
+    checkinOggi = db.prepare(`
       SELECT strftime('%H:%M', p.entrata_il, 'localtime') AS ora, c.nome, c.cognome
       FROM presenze p JOIN clienti c ON c.id = p.cliente_id
       WHERE p.data = date('now', 'localtime')
@@ -80,40 +101,53 @@ router.get('/', (req, res) => {
     `).all();
   } catch (_) {}
 
+  const nPresenze = checkinOggi.length;
+
   const body = `
     <header class="page-head">
       <p class="eyebrow">Accademia · Élite Training Club</p>
       <h1>Bacheca</h1>
-      <p class="muted">Ciao ${escapeHtml(req.admin.username)}</p>
     </header>
 
-    <div class="grid grid-2" style="margin-bottom:16px">
-      <div class="card">
-        <h2 class="section-title">Revisioni schede</h2>
-        ${daRevisionare > 0
-          ? `<p>Hai <strong>${daRevisionare}</strong> ${daRevisionare === 1 ? 'scheda' : 'schede'} da revisionare.</p>
-             <a class="btn btn-primary" href="/admin/revisioni">Apri revisioni</a>`
-          : '<p class="muted">Nessuna scheda da revisionare.</p>'}
-      </div>
-      <div class="card">
-        <h2 class="section-title">Avvisi</h2>
-        ${nonLetti > 0
-          ? `<p>Hai <strong>${nonLetti}</strong> ${nonLetti === 1 ? 'avviso' : 'avvisi'} non letti.</p>
-             <a class="btn" href="/admin/bacheca">Apri avvisi</a>`
-          : '<p class="muted">Nessun avviso non letto.</p><p style="margin-top:8px"><a class="muted small" href="/admin/bacheca">Vedi storico avvisi →</a></p>'}
-      </div>
+    <div class="bacheca-cards">
+      <a class="bacheca-card${daRevisionare > 0 ? ' bacheca-card--warn' : ' bacheca-card--ok'}" href="/admin/revisioni">
+        <p class="bc-label">Revisioni</p>
+        <p class="bc-value">${daRevisionare > 0 ? daRevisionare : '✓'}</p>
+        <p class="bc-sub">${daRevisionare > 0 ? `${daRevisionare === 1 ? 'scheda' : 'schede'} da completare` : 'Tutto revisionato'}</p>
+      </a>
+      <a class="bacheca-card${pagAperti > 0 ? ' bacheca-card--warn' : ' bacheca-card--ok'}" href="/admin/clienti">
+        <p class="bc-label">Pagamenti aperti</p>
+        <p class="bc-value">${pagAperti > 0 ? pagAperti : '✓'}</p>
+        <p class="bc-sub">${pagAperti > 0 ? `${pagAperti === 1 ? 'cliente' : 'clienti'} da saldare` : 'Tutto saldato'}</p>
+      </a>
+      <a class="bacheca-card${assNonInRegola > 0 ? ' bacheca-card--warn' : ' bacheca-card--ok'}" href="/admin/clienti">
+        <p class="bc-label">Assicurazioni ${annoC}</p>
+        <p class="bc-value">${assNonInRegola > 0 ? assNonInRegola : '✓'}</p>
+        <p class="bc-sub">${assNonInRegola > 0 ? `${assNonInRegola === 1 ? 'cliente' : 'clienti'} da sistemare` : 'Tutti coperti'}</p>
+      </a>
+      <a class="bacheca-card bacheca-card--neutral" href="/admin/nfc">
+        <p class="bc-label">Presenze oggi</p>
+        <p class="bc-value">${nPresenze}</p>
+        <p class="bc-sub">${nPresenze === 0 ? 'Nessun check-in ancora' : `${nPresenze === 1 ? 'presenza' : 'presenze'} oggi`}</p>
+      </a>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-top:20px">
       <h2 class="section-title">Oggi in palestra</h2>
       ${checkinOggi.length === 0
         ? '<p class="muted">Nessun check-in registrato oggi.</p>'
-        : `<p class="muted small" style="margin-bottom:10px">Check-in oggi: <strong>${checkinOggi.length}</strong></p>
-           <ul style="margin:0 0 14px;padding-left:18px;line-height:2">
+        : `<ul style="margin:0 0 14px;padding-left:18px;line-height:2">
              ${checkinOggi.map(p => `<li><span class="muted small">${escapeHtml(p.ora)}</span> &nbsp;${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</li>`).join('')}
            </ul>
            <a class="muted small" href="/admin/nfc">Vai a NFC / Ingressi →</a>`}
     </div>
+
+    ${nonLetti > 0 ? `
+    <div class="card" style="margin-top:12px">
+      <h2 class="section-title">Avvisi tecnici</h2>
+      <p><strong>${nonLetti}</strong> ${nonLetti === 1 ? 'avviso' : 'avvisi'} non ${nonLetti === 1 ? 'letto' : 'letti'}.</p>
+      <a class="btn btn-ghost small" href="/admin/bacheca">Apri avvisi</a>
+    </div>` : ''}
   `;
   res.send(adminLayout({
     title: 'Bacheca operativa',

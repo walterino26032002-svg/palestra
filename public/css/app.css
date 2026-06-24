@@ -1007,6 +1007,19 @@ code {
 .export-cta { margin-top: 8px; font-weight: 600; font-size: .85rem; color: var(--ink); }
 .export-tile:hover .export-cta { color: var(--gold); }
 
+/* --- Bacheca 4 card operative --- */
+.bacheca-cards { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; }
+@media (min-width: 700px) { .bacheca-cards { grid-template-columns: repeat(4, 1fr); } }
+.bacheca-card { display: block; text-decoration: none; padding: 16px 18px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); transition: box-shadow .15s; }
+.bacheca-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.bacheca-card--ok   { border-color: var(--ok);   background: #f0fdf4; }
+.bacheca-card--warn { border-color: var(--warn);  background: #fffbeb; }
+.bacheca-card--neutral { border-color: var(--line); }
+.bc-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 4px; }
+.bc-value { font-size: 2rem; font-weight: 800; letter-spacing: -.03em; margin: 0 0 2px; line-height: 1; color: var(--ink); }
+.bacheca-card--warn .bc-value { color: var(--warn-dark, #92400e); }
+.bc-sub   { font-size: .82rem; color: var(--muted); margin: 0; }
+
 /* --- Card-link (card cliccabile con freccia) --- */
 .card-link {
   cursor: pointer; text-decoration: none; color: inherit; display: block;
