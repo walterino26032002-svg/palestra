@@ -13,3 +13,4 @@ data/*.sqlite-wal
 .claude/settings.local.json
 .claude/worktrees/
 backups/
+import/
