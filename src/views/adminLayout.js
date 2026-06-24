@@ -19,14 +19,11 @@ const NAV = [
   { href: '/admin/export',     label: 'Export / Backup', activeOn: ['/admin/backup'] },
 ];
 
-function navHtml(active, counts = {}) {
+function navHtml(active) {
   return NAV.map((n) => {
     const isActive = active === n.href ||
       (n.activeOn && n.activeOn.some(p => (active || '').startsWith(p)));
-    const cls = isActive ? 'navlink active' : 'navlink';
-    const c = counts[n.countHref || n.href];
-    const dot = c ? ` <span class="dot">${escapeHtml(String(c))}</span>` : '';
-    return `<a href="${n.href}" class="${cls}">${escapeHtml(n.label)}${dot}</a>`;
+    return `<a href="${n.href}" class="${isActive ? 'navlink active' : 'navlink'}">${escapeHtml(n.label)}</a>`;
   }).join('');
 }
 
@@ -82,7 +79,7 @@ function adminLayout({ title, user, body, breadcrumb = [], active = '', counts =
     </form>
   </div>
   <nav class="row2" aria-label="Navigazione amministrazione">
-    ${navHtml(active, counts)}
+    ${navHtml(active)}
   </nav>
 </header>
 <main class="container">
