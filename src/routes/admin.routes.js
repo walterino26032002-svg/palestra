@@ -397,57 +397,18 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       </div>
     </section>
 
-    <section class="grid grid-2" style="align-items:start">
-      <div class="card">
-        <h2>Anagrafica</h2>
-        <form method="POST" action="/admin/clienti/${cliente.id}" class="form-stacked">
-          <label>Nome <input name="nome" value="${escapeHtml(cliente.nome)}" required></label>
-          <label>Cognome <input name="cognome" value="${escapeHtml(cliente.cognome)}" required></label>
-          <label>Email <input name="email" type="email" value="${escapeHtml(cliente.email || '')}"></label>
-          <label>Telefono <input name="telefono" value="${escapeHtml(cliente.telefono || '')}"></label>
-          <label>Note <textarea name="note" rows="2">${escapeHtml(cliente.note || '')}</textarea></label>
-          <label>Stato
-            <select name="attivo">
-              <option value="1" ${cliente.attivo ? 'selected' : ''}>Attivo</option>
-              <option value="0" ${!cliente.attivo ? 'selected' : ''}>Non attivo</option>
-            </select>
-          </label>
-          <div class="toolbar">
-            <button type="submit" class="btn btn-primary">Salva anagrafica</button>
-          </div>
-        </form>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:16px">
-        <div class="card">
-          <h2>Scheda allenamento</h2>
-          ${schedaRiepilogo.ha_scheda
-            ? `<p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count}</strong> (${schedaRiepilogo.blocchi_archiviati} archiviati)
-                   · Sedute: <strong>${schedaRiepilogo.sedute_totali}</strong>
-                   (${schedaRiepilogo.sedute_completate} completate)</p>
-               ${schedaRiepilogo.prossima_seduta
-                 ? `<p>Seduta PROSSIMA: <a href="/admin/sedute/${schedaRiepilogo.prossima_seduta.id}">Settimana ${schedaRiepilogo.prossima_seduta.indice_settimana} · Seduta ${schedaRiepilogo.prossima_seduta.indice_seduta}</a></p>`
-                 : ''}
-               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Apri scheda completa</a>`
-            : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
-               <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco</a>`}
-        </div>
-        <div class="card">
-          <h2>Accesso cliente</h2>
-          <p class="muted small" style="margin-bottom:12px"><strong>Nome utente</strong><br>
-            ${cliente.username
-              ? `<code>${escapeHtml(cliente.username)}</code>`
-              : (cleanPart(cliente.nome) && cleanPart(cliente.cognome)
-                ? '<span class="muted">Da attivare — salva l\'anagrafica per generare il nome utente.</span>'
-                : '<span class="muted">Non disponibile — compila Nome e Cognome in Anagrafica.</span>')}
-          </p>
-          <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
-            <label>Nuova password <input name="password" type="password" required></label>
-            <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
-          </form>
-          <p class="muted small">La password non è visibile dopo il salvataggio. Puoi solo impostarne una nuova.</p>
-        </div>
-      </div>
+    <section class="section-gap card">
+      <h2>Scheda allenamento</h2>
+      ${schedaRiepilogo.ha_scheda
+        ? `<p class="muted small">Blocchi: <strong>${schedaRiepilogo.blocchi_count}</strong> (${schedaRiepilogo.blocchi_archiviati} archiviati)
+               · Sedute: <strong>${schedaRiepilogo.sedute_totali}</strong>
+               (${schedaRiepilogo.sedute_completate} completate)</p>
+           ${schedaRiepilogo.prossima_seduta
+             ? `<p>Seduta PROSSIMA: <a href="/admin/sedute/${schedaRiepilogo.prossima_seduta.id}">Settimana ${schedaRiepilogo.prossima_seduta.indice_settimana} · Seduta ${schedaRiepilogo.prossima_seduta.indice_seduta}</a></p>`
+             : ''}
+           <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Apri scheda completa</a>`
+        : `<p><span class="badge badge-warn">Senza scheda</span></p><p class="muted small">Nessun blocco o seduta associata a questo cliente.</p>
+           <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda">Crea blocco</a>`}
     </section>
 
     <section class="section-gap">
@@ -496,26 +457,6 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
       </script>
     </section>
 
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Storico pagamenti</summary>
-      <div class="table-wrap" style="margin-top:10px">
-        <table class="table">
-          <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th><th>Stato</th></tr></thead>
-          <tbody>${pagRows}</tbody>
-        </table>
-      </div>
-    </details>
-
-    <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Abbonamenti mensili</summary>
-      <div class="table-wrap" style="margin-top:10px">
-        <table class="table">
-          <thead><tr><th>Tipo</th><th>Dal</th><th>Al</th><th>Stato</th></tr></thead>
-          <tbody>${mensileRows}</tbody>
-        </table>
-      </div>
-    </details>
-
     <section class="section-gap">
       <h2>Assicurazione annuale ${annoCorrente}</h2>
       ${(() => {
@@ -552,6 +493,26 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     </section>
 
     <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Storico pagamenti</summary>
+      <div class="table-wrap" style="margin-top:10px">
+        <table class="table">
+          <thead><tr><th>Data</th><th>Servizio</th><th class="col-right">Ingressi</th><th class="col-right">Importo</th><th>Metodo</th><th>Stato</th></tr></thead>
+          <tbody>${pagRows}</tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Abbonamenti mensili</summary>
+      <div class="table-wrap" style="margin-top:10px">
+        <table class="table">
+          <thead><tr><th>Tipo</th><th>Dal</th><th>Al</th><th>Stato</th></tr></thead>
+          <tbody>${mensileRows}</tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="section-gap">
       <summary style="cursor:pointer;font-weight:600;padding:10px 0">Movimenti ingressi</summary>
       <div class="table-wrap" style="margin-top:10px">
         <table class="table">
@@ -562,7 +523,47 @@ router.get('/clienti/:id(\\d+)', (req, res) => {
     </details>
 
     <details class="section-gap">
-      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Export cliente</summary>
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Anagrafica cliente · ${escapeHtml(cliente.cognome)} ${escapeHtml(cliente.nome)} · ${cliente.attivo ? 'Attivo' : 'Non attivo'}</summary>
+      <div class="card" style="margin-top:10px">
+        <form method="POST" action="/admin/clienti/${cliente.id}" class="form-stacked">
+          <label>Nome <input name="nome" value="${escapeHtml(cliente.nome)}" required></label>
+          <label>Cognome <input name="cognome" value="${escapeHtml(cliente.cognome)}" required></label>
+          <label>Email <input name="email" type="email" value="${escapeHtml(cliente.email || '')}"></label>
+          <label>Telefono <input name="telefono" value="${escapeHtml(cliente.telefono || '')}"></label>
+          <label>Note <textarea name="note" rows="2">${escapeHtml(cliente.note || '')}</textarea></label>
+          <label>Stato
+            <select name="attivo">
+              <option value="1" ${cliente.attivo ? 'selected' : ''}>Attivo</option>
+              <option value="0" ${!cliente.attivo ? 'selected' : ''}>Non attivo</option>
+            </select>
+          </label>
+          <div class="toolbar">
+            <button type="submit" class="btn btn-primary">Salva anagrafica</button>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Accesso cliente${cliente.username ? ` · username: ${escapeHtml(cliente.username)}` : ''}</summary>
+      <div class="card" style="margin-top:10px">
+        <p class="muted small" style="margin-bottom:12px"><strong>Nome utente</strong><br>
+          ${cliente.username
+            ? `<code>${escapeHtml(cliente.username)}</code>`
+            : (cleanPart(cliente.nome) && cleanPart(cliente.cognome)
+              ? '<span class="muted">Da attivare — salva l\'anagrafica per generare il nome utente.</span>'
+              : '<span class="muted">Non disponibile — compila Nome e Cognome in Anagrafica.</span>')}
+        </p>
+        <form method="POST" action="/admin/clienti/${cliente.id}/password" class="form-stacked">
+          <label>Nuova password <input name="password" type="password" required></label>
+          <div class="toolbar"><button type="submit" class="btn btn-primary">Imposta password</button></div>
+        </form>
+        <p class="muted small">La password non è visibile dopo il salvataggio. Puoi solo impostarne una nuova.</p>
+      </div>
+    </details>
+
+    <details class="section-gap">
+      <summary style="cursor:pointer;font-weight:600;padding:10px 0">Export e stampe</summary>
       <div class="toolbar" style="margin-top:10px">
         <a class="btn btn-primary" href="/admin/clienti/${cliente.id}/scheda/stampa" target="_blank">Stampa scheda</a>
         <a class="btn" href="/admin/clienti/${cliente.id}/scheda/xlsx">XLSX scheda</a>
