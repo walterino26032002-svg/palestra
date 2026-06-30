@@ -130,13 +130,13 @@
     var fs       = data.feedback_seduta || {};
 
     wkState.localStato = {};
-    var firstTodo = 0;
+    var firstTodo = -1;
     for (var ii = 0; ii < esercizi.length; ii++) {
       var fInit = feedbackFor(fbList, esercizi[ii].id) || {};
       wkState.localStato[esercizi[ii].id] = fInit.stato || '';
-      if (ii > 0 && !wkState.localStato[esercizi[ii].id] && firstTodo === 0) firstTodo = ii;
+      if (firstTodo === -1 && !wkState.localStato[esercizi[ii].id]) firstTodo = ii;
     }
-    wkState.currentIdx = firstTodo;
+    wkState.currentIdx = firstTodo >= 0 ? firstTodo : 0;
 
     /* overview card — cliccabile per aprire esercizio specifico */
     function exOverviewCard(ex, idx) {
@@ -183,8 +183,8 @@
       h += stato==='completato' ? '✓ Completato' : stato==='saltato' ? 'Saltato' : 'In corso';
       h += '</span></div>';
       h += '<div class="ck-fb-grid">';
-      h += '<label class="ck-fl"><span>Carico usato</span><input type="text" inputmode="decimal" name="carico_effettivo" value="'+v(f.carico_effettivo)+'" placeholder="es. 60 kg"></label>';
-      h += '<label class="ck-fl"><span>Reps fatte</span><input type="text" inputmode="numeric" name="reps_effettive" value="'+v(f.reps_effettive)+'" placeholder="es. 8 8 7"></label>';
+      h += '<label class="ck-fl"><span>Carico usato</span><input type="text" name="carico_effettivo" value="'+v(f.carico_effettivo)+'" placeholder="es. 20kg, elastico, corpo libero"></label>';
+      h += '<label class="ck-fl"><span>Reps fatte</span><input type="text" name="reps_effettive" value="'+v(f.reps_effettive)+'" placeholder="es. 8, 8-10, 8 8 7, max"></label>';
       h += '</div>';
       h += '<label class="ck-fl ck-fl--full"><span>Feedback / note</span><textarea name="note" rows="2" placeholder="Feedback / note">'+v(f.note)+'</textarea></label>';
       h += '<p class="ck-save" data-st></p>';
