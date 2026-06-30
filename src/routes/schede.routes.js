@@ -322,7 +322,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
   const esRows = esercizi.map((ex) => `
     <tr data-id="${ex.id}">
       <td><input name="nome" value="${escapeHtml(ex.nome)}" required></td>
-      <td><input name="serie" type="number" min="0" value="${ex.serie ?? ''}" style="width:60px"></td>
+      <td><input name="serie" type="text" inputmode="decimal" value="${escapeHtml(String(ex.serie ?? ''))}" style="width:60px" placeholder="es. 3-4"></td>
       <td><input name="ripetizioni" value="${escapeHtml(ex.ripetizioni || '')}" style="width:80px"></td>
       <td><input name="carico" value="${escapeHtml(ex.carico || '')}" style="width:90px"></td>
       <td><input name="recupero" value="${escapeHtml(ex.recupero || '')}" style="width:80px"></td>
@@ -379,7 +379,7 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
     <h3 style="margin-top:20px">Aggiungi esercizio</h3>
     <form method="POST" action="/admin/sedute/${seduta.id}/esercizi" class="card form-inline">
       <label>Nome * <input name="nome" required></label>
-      <label>Serie <input name="serie" type="number" min="0"></label>
+      <label>Serie <input name="serie" type="text" inputmode="decimal" placeholder="es. 3-4"></label>
       <label>Reps <input name="ripetizioni" placeholder="8-10"></label>
       <label>Carico <input name="carico" placeholder="60kg"></label>
       <label>Recupero <input name="recupero" placeholder="90s"></label>
@@ -428,7 +428,6 @@ router.get('/sedute/:id(\\d+)', (req, res) => {
           const inputs = tr.querySelectorAll('input');
           const out = {};
           inputs.forEach((i) => out[i.name] = i.value);
-          out.serie = out.serie === '' ? null : parseInt(out.serie, 10);
           out.rpe = out.rpe === '' ? null : out.rpe;
           return out;
         }

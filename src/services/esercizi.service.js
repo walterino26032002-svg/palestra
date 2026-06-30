@@ -44,8 +44,8 @@ function addEsercizio({ sedutaId, nome, serie, ripetizioni, carico, recupero, rp
   }
 
   const ord = Number.isFinite(+ordine) ? parseInt(ordine, 10) : nextOrdine(sedutaId);
-  const serieNum = (serie === undefined || serie === null || serie === '') ? null
-    : Math.max(0, parseInt(serie, 10));
+  const serieVal = (serie === undefined || serie === null || serie === '') ? null
+    : String(serie).trim();
 
   const info = db.prepare(`
     INSERT INTO esercizi (seduta_id, ordine, nome, serie, ripetizioni, carico, recupero, rpe, note)
@@ -54,7 +54,7 @@ function addEsercizio({ sedutaId, nome, serie, ripetizioni, carico, recupero, rp
     sedutaId,
     ord,
     String(nome).trim(),
-    serieNum,
+    serieVal,
     ripetizioni ? String(ripetizioni).trim() : null,
     carico ? String(carico).trim() : null,
     recupero ? String(recupero).trim() : null,
@@ -83,7 +83,7 @@ function updateEsercizio(id, { nome, serie, ripetizioni, carico, recupero, rpe, 
      WHERE id = ?
   `).run(
     nome ?? null,
-    serie === undefined ? null : (serie === null || serie === '' ? null : Math.max(0, parseInt(serie, 10))),
+    serie === undefined ? null : (serie === null || serie === '' ? null : String(serie).trim()),
     ripetizioni ?? null,
     carico ?? null,
     recupero ?? null,
